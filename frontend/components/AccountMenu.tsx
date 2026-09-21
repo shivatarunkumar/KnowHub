@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { SessionUser } from "@/lib/session";
 import { CreateIcon, UserIcon } from "./icons";
 
 export function AccountMenu({ user }: { user: SessionUser | null }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -47,8 +46,10 @@ export function AccountMenu({ user }: { user: SessionUser | null }) {
   async function signOut() {
     await fetch("/api/v1/auth/logout", { method: "POST" });
     setOpen(false);
-    router.refresh();
-    router.push("/");
+    // A full page load, deliberately: router.push() can serve the "/" payload that was
+    // prefetched while signed in, which left the account menu on screen until the user
+    // refreshed by hand. This also drops any client state belonging to the session.
+    window.location.assign("/");
   }
 
   return (

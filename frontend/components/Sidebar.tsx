@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ComponentType, SVGProps } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { type ComponentType, type SVGProps, useState } from "react";
 import type { Topic } from "@/lib/api";
 import type { SessionUser } from "@/lib/session";
 import { ApiStatus } from "./ApiStatus";
@@ -14,7 +14,6 @@ import {
   PlaylistIcon,
   ShortsIcon,
   SubscriptionsIcon,
-  TopicIcon,
   UserIcon,
 } from "./icons";
 
@@ -42,6 +41,7 @@ export function Sidebar({
   user: SessionUser | null;
 }) {
   const pathname = usePathname();
+  const activeTopic = useSearchParams().get("topic");
 
   if (!expanded) {
     // Mini rail (desktop): icon + tiny label, for when the guide is collapsed.
@@ -99,22 +99,8 @@ export function Sidebar({
       </Link>
 
       <Divider />
-      <h2 className="px-3 pb-1 pt-2 text-base font-semibold">Topics</h2>
-      {topics.length === 0 ? (
-        <p className="px-3 py-2 text-muted">No topics loaded</p>
-      ) : (
-        topics.map((t) => (
-          <Link
-            key={t.slug}
-            href={`/?topic=${t.slug}`}
-            title={t.description ?? t.name}
-            className="flex items-center gap-5 rounded-lg px-3 py-2 hover:bg-surface-hover"
-          >
-            <TopicIcon width={20} height={20} />
-            <span className="truncate">{t.name}</span>
-          </Link>
-        ))
-      )}
+      <TopicCloud topics={topics} active={activeTopic} />
+
       <div className="mt-auto pt-4">
         <Divider />
         <ApiStatus />
@@ -144,4 +130,85 @@ function Section({ items, pathname }: { items: NavItem[]; pathname: string }) {
 
 function Divider() {
   return <hr className="my-3 border-line" />;
+}
+
+
+/**
+ * Topics in the guide used to be a long list of identical rows, which read as a second
+ * copy of the chip bar at the top of the home page. As tags they look like what they are
+ * — labels, not navigation — and eight of them fit in the space the list needed for four.
+ */
+function TopicCloud({ topics, active }: { topics: Topic[]; active: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+  if (topics.length === 0) {
+    return (
+      <div className="px-3 py-2">
+        <h2 className="pb-1 text-base font-semibold">Topics</h2>
+        <p className="text-muted">No topics loaded</p>
+      </div>
+    );
+  }
+
+  // an active topic is always visible, even when it sits past the cut
+  const shown = expanded ? topics : topics.slice(0, 8);
+  const activeHidden = active && !shown.some((t) => t.slug === active);
+  const visible = activeHidden ? [...shown, ...topics.filter((t) => t.slug === active)] : shown;
+  const hiddenCount = topics.length - visible.length;
+
+  return (
+    <div className="px-3 pb-2">
+      <h2 className="flex items-baseline justify-between pb-2 pt-2 text-base font-semibold">
+        Topics
+        {active && (
+          <Link href="/" className="text-xs font-medium text-brand hover:underline">
+            Clear
+          </Link>
+        )}
+      </h2>
+
+      <ul className="flex flex-wrap gap-1.5">
+        {visible.map((topic) => {
+          const isActive = topic.slug === active;
+          return (
+            <li key={topic.slug}>
+              <Link
+                href={`/?topic=${topic.slug}`}
+                title={topic.description ?? topic.name}
+                aria-current={isActive ? "page" : undefined}
+                className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                  isActive
+                    ? "bg-brand text-brand-contrast"
+                    : "bg-surface text-muted hover:bg-surface-hover hover:text-fg"
+                }`}
+              >
+                {topic.name}
+              </Link>
+            </li>
+          );
+        })}
+        {hiddenCount > 0 && (
+          <li>
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface"
+            >
+              +{hiddenCount} more
+            </button>
+          </li>
+        )}
+        {expanded && (
+          <li>
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface"
+            >
+              Show less
+            </button>
+          </li>
+        )}
+      </ul>
+    </div>
+  );
 }

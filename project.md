@@ -44,14 +44,14 @@ for what each phase covers.
 | **9–11. Semantic search, GCP deploy, more AI** | ⬜ not started | `video_embeddings` (pgvector, HNSW) and the BigQuery DDL are written but unused |
 
 **API surface today** (`/api/v1`, full list at http://localhost:8000/docs):
-`auth/{register,login,refresh,logout,me}` · `topics` · `videos/feed` ·
+`auth/{register,login,refresh,logout,me,forgot-password,reset-password}` · `topics` · `videos/feed` ·
 `videos/uploads/start` + `videos/{id}/complete` · `videos/{id}` (GET/PATCH/DELETE) ·
 `videos/{id}/stream` · `videos/{id}/thumbnail` (GET/POST) · `videos/{id}/view` ·
 `videos/{id}/reaction` · `videos/{id}/comments` · `comments/{id}` (PATCH/DELETE) ·
 `comments/{id}/reaction` · `videos/{id}/share` · `shared-with-me` · `users/search` ·
 `channels/{handle}` · `ai/enhance` + `ai/enhance/outcome` · `health`
 
-**Web routes today**: `/` · `/watch/[id]` · `/upload` · `/channel/[handle]` · `/about` · `/login` · `/register`
+**Web routes today**: `/` · `/watch/[id]` · `/upload` · `/channel/[handle]` · `/about` · `/login` · `/register` · `/forgot-password` · `/reset-password`
 
 `/about` is the in-app explainer: what KnowHub is, why it exists, and diagrams of the architecture, the upload path into Cloud Storage, the login flow and the engagement tables. It is written from this document and must be updated with it.
 
@@ -231,6 +231,8 @@ gs://knowhub-media/                    # served via CDN
 - Email and password in the Postgres `users` table. Passwords are hashed with **argon2** (pwdlib).
 - A short-lived **JWT access token** (15 min) plus a **refresh token** (14 days). The refresh token is stored hashed in `refresh_tokens`, delivered as an httpOnly cookie, and rotated on each use.
 - FastAPI dependencies: `get_current_user_optional` for public endpoints (to personalize when logged in) and `get_current_user` for protected ones. A role check (`user`, `admin`).
+- **Forgotten password**: `POST /auth/forgot-password` always answers the same way, whether or not the address has an account, so it cannot be used to discover who is registered. A single-use token (SHA-256 hashed, 30 min) is stored in `password_reset_tokens`; asking again invalidates the previous link. `POST /auth/reset-password` sets the password, clears any lockout, and revokes every refresh token, so all other devices are signed out.
+  - **Delivery is the one piece still missing**: there is no mail server, so the link is written to the API log, and returned in the response only when `APP_ENV=local`. Wiring a provider means sending `reset_url` from that endpoint; nothing else changes.
 - Later: add "Sign in with Google" (Google Workspace OIDC) that links to the same `users` row.
 
 ### 3.7 Local-first development (current target)
@@ -400,7 +402,8 @@ All tables use `id UUID PK`, `created_at`, `updated_at`.
 | Table | Key columns |
 |---|---|
 | **users** | email (unique), password_hash, display_name, handle (unique, @handle), avatar_url, banner_url, bio, role (`user`/`admin`), is_active, last_login_at |
-| **refresh_tokens** | user_id → users, token_hash, expires_at, revoked_at, user_agent, ip |
+| **refresh_tokens** | user_id → users, token_hash, expires_at, revoked_at, revoked_reason (`rotated`/`logout`/`reuse_detected`/`password_reset`/`admin`), user_agent, ip |
+| **password_reset_tokens** | user_id → users, token_hash (SHA-256), expires_at, used_at, requested_ip, user_agent. Single use, 30 min (`PASSWORD_RESET_TTL_MIN`) |
 | **topics** | slug (`bigquery`), name, description, icon. Admin-managed list of GCP services / areas |
 | **videos** | owner_id → users, type (`video`/`short`), title, description, category, primary_topic_id → topics, visibility (`internal`/`unlisted`/`restricted`/`private`), comments_enabled, status (`UPLOADING`/`PROCESSING`/`READY`/`FAILED`), raw_gcs_path, hls_path, thumbnail_path, duration_sec, width, height, size_bytes, view_count, like_count, comment_count, published_at, deleted_at, search_vector (tsvector, generated) |
 | **video_viewers** | video_id, user_id, added_by, created_at. The allow-list behind visibility `restricted` |

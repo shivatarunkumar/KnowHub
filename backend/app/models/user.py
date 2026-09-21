@@ -42,3 +42,17 @@ class RefreshToken(UUIDPrimaryKey, Base):
     user_agent: Mapped[str | None]
     ip: Mapped[str | None] = mapped_column(INET)
     created_at: Mapped[datetime]
+
+
+class PasswordResetToken(UUIDPrimaryKey, Base):
+    """A single-use token proving someone can read the account's mailbox."""
+
+    __tablename__ = "password_reset_tokens"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    token_hash: Mapped[str]
+    expires_at: Mapped[datetime]
+    used_at: Mapped[datetime | None]
+    requested_ip: Mapped[str | None] = mapped_column(INET)
+    user_agent: Mapped[str | None]
+    created_at: Mapped[datetime]

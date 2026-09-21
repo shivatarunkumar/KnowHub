@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     jwt_secret: str = INSECURE_JWT_SECRET
     access_token_ttl_min: int = 15
     refresh_token_ttl_days: int = 14
+    password_reset_ttl_min: int = 30
 
     # --- gcp ---
     gcp_project_id: str = "knowhub-local"

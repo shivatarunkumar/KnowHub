@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useState } from "react";
-import { LogoMark } from "./icons";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { EyeIcon, EyeOffIcon, LogoMark } from "./icons";
 
 type Mode = "login" | "register";
 
@@ -147,6 +147,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
           placeholder={mode === "register" ? "At least 8 characters" : ""}
           error={fieldErrors.password}
           required
+          action={
+            mode === "login" ? (
+              <Link href="/forgot-password" className="text-xs font-medium text-brand hover:underline">
+                Forgot password?
+              </Link>
+            ) : undefined
+          }
         />
 
         {mode === "register" && (
@@ -186,6 +193,7 @@ function Field({
   onChange,
   error,
   type = "text",
+  action,
   ...rest
 }: {
   label: string;
@@ -193,28 +201,51 @@ function Field({
   onChange: (value: string) => void;
   error?: string;
   type?: string;
+  /** shown on the right of the label row, e.g. a "Forgot password?" link */
+  action?: ReactNode;
   autoComplete?: string;
   placeholder?: string;
   required?: boolean;
 }) {
   const id = label.toLowerCase().replace(/\s+/g, "-");
+  const [revealed, setRevealed] = useState(false);
+  const isPassword = type === "password";
+
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-invalid={Boolean(error)}
-        aria-describedby={error ? `${id}-error` : undefined}
-        className={`h-10 rounded-lg border bg-bg px-3 outline-none focus:border-brand ${
-          error ? "border-bad" : "border-line"
-        }`}
-        {...rest}
-      />
+      <div className="flex items-baseline justify-between gap-2">
+        <label htmlFor={id} className="text-sm font-medium">
+          {label}
+        </label>
+        {action}
+      </div>
+      <div className="relative">
+        <input
+          id={id}
+          type={isPassword && revealed ? "text" : type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={`h-10 w-full rounded-lg border bg-bg pl-3 outline-none focus:border-brand ${
+            isPassword ? "pr-11" : "pr-3"
+          } ${error ? "border-bad" : "border-line"}`}
+          {...rest}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setRevealed((v) => !v)}
+            // the label changes with the state, so a screen reader announces what it does now
+            aria-label={revealed ? "Hide password" : "Show password"}
+            aria-pressed={revealed}
+            title={revealed ? "Hide password" : "Show password"}
+            className="absolute right-1 top-1 flex h-8 w-9 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-fg"
+          >
+            {revealed ? <EyeOffIcon width={18} height={18} /> : <EyeIcon width={18} height={18} />}
+          </button>
+        )}
+      </div>
       {error && (
         <p id={`${id}-error`} className="text-xs text-bad">
           {error}

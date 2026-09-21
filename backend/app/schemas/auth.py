@@ -33,6 +33,28 @@ class LoginIn(BaseModel):
         return value.strip().lower()
 
 
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def lowercase_email(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+    password: str = Field(min_length=8, max_length=200)
+
+
+class ForgotPasswordOut(BaseModel):
+    """The message is deliberately the same whether or not the email is registered."""
+
+    message: str
+    # only filled in locally, where there is no mail server to deliver the link
+    reset_url: str | None = None
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

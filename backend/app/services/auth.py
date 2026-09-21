@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.config import Settings
-from app.models.user import RefreshToken, User
+from app.models.user import PasswordResetToken, RefreshToken, User
 from app.schemas.auth import RegisterIn
 
 MAX_FAILED_LOGINS = 5
@@ -197,3 +197,76 @@ async def revoke_all_for_user(session: AsyncSession, user_id: uuid.UUID, reason:
     for row in rows:
         row.revoked_at = func.now()
         row.revoked_reason = reason
+
+
+# ------------------------------------------------------------------ password reset
+async def start_password_reset(
+    session: AsyncSession,
+    settings: Settings,
+    email: str,
+    *,
+    user_agent: str | None = None,
+    ip: str | None = None,
+) -> tuple[User, str] | None:
+    """Create a reset token for this email, or return None if nobody owns it.
+
+    The caller must answer the same way either way: telling an anonymous visitor whether
+    an address has an account is an account-enumeration leak.
+    """
+    user = await session.scalar(
+        select(User).where(User.email == email.strip().lower(), User.deleted_at.is_(None))
+    )
+    if user is None or not user.is_active:
+        return None
+
+    now = datetime.now(UTC)
+    # any earlier link stops working the moment a new one is asked for
+    outstanding = await session.scalars(
+        select(PasswordResetToken).where(
+            PasswordResetToken.user_id == user.id, PasswordResetToken.used_at.is_(None)
+        )
+    )
+    for row in outstanding:
+        row.used_at = now
+
+    token, token_hash = security.new_opaque_token()
+    session.add(
+        PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=now + timedelta(minutes=settings.password_reset_ttl_min),
+            requested_ip=ip,
+            user_agent=user_agent,
+            created_at=now,
+        )
+    )
+    return user, token
+
+
+async def complete_password_reset(
+    session: AsyncSession, settings: Settings, token: str, password: str
+) -> User:
+    """Set the new password. The token works once, and only before it expires."""
+    row = await session.scalar(
+        select(PasswordResetToken).where(PasswordResetToken.token_hash == security.hash_token(token))
+    )
+    now = datetime.now(UTC)
+    if row is None or row.used_at is not None or row.expires_at <= now:
+        raise AuthError(
+            "That reset link is no longer valid. Please request a new one.", status_code=400, field="token"
+        )
+
+    user = await session.get(User, row.user_id)
+    if user is None or user.deleted_at is not None or not user.is_active:
+        raise AuthError("That reset link is no longer valid. Please request a new one.", status_code=400)
+
+    user.password_hash = security.hash_password(password)
+    user.password_changed_at = now
+    # a reset is also how someone gets back in after locking themselves out
+    user.failed_login_count = 0
+    user.locked_until = None
+    row.used_at = now
+
+    # whoever else was signed in as this user is signed out: the password just changed
+    await revoke_all_for_user(session, user.id, reason="password_reset")
+    return user

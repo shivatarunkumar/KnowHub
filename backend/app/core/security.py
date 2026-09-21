@@ -22,7 +22,7 @@ from app.core.config import Settings
 
 _hasher = PasswordHasher()
 ALGORITHM = "HS256"
-REFRESH_TOKEN_BYTES = 32
+TOKEN_BYTES = 32
 
 
 def hash_password(password: str) -> str:
@@ -65,11 +65,21 @@ def decode_access_token(settings: Settings, token: str) -> dict[str, Any] | None
     return claims if claims.get("typ") == "access" else None
 
 
+def hash_token(token: str) -> str:
+    """What we store instead of an opaque token, so the table is useless if it leaks."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def new_opaque_token() -> tuple[str, str]:
+    """(token to hand out, hash to store). Used for refresh tokens and reset links."""
+    token = secrets.token_urlsafe(TOKEN_BYTES)
+    return token, hash_token(token)
+
+
 def new_refresh_token() -> tuple[str, str]:
     """Return (token to send to the browser, hash to store)."""
-    token = secrets.token_urlsafe(REFRESH_TOKEN_BYTES)
-    return token, hash_refresh_token(token)
+    return new_opaque_token()
 
 
 def hash_refresh_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return hash_token(token)

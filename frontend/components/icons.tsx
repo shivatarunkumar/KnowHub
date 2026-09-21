@@ -210,3 +210,12 @@ export const InfoIcon = (p: IconProps) => (
     <circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none" />
   </Icon>
 );
+
+export const EyeOffIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9.9 5.1A9.6 9.6 0 0 1 12 4.9c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3.3 4" />
+    <path d="M6.5 6.9A16 16 0 0 0 2.5 11.4S6 17.9 12 17.9a9.4 9.4 0 0 0 4-.9" />
+    <path d="M10 9.7a3 3 0 0 0 4.2 4.2" />
+    <path d="M3 3l18 18" />
+  </Icon>
+);

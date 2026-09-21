@@ -28,4 +28,5 @@ async def test_lists_seeded_topics_in_order(db_available):
     await get_engine().dispose()
     assert response.status_code == 200
     slugs = [t["slug"] for t in response.json()]
-    assert slugs[:3] == ["bigquery", "pubsub", "gke"]
+    # "gcp" is the umbrella topic and sorts above the individual services
+    assert slugs[:4] == ["gcp", "bigquery", "pubsub", "gke"]
