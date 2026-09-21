@@ -21,6 +21,14 @@ def test_cors_origins_are_split():
     assert settings.cors_origin_list == ["http://a.test", "http://b.test"]
 
 
+def test_empty_jwt_secret_is_rejected_everywhere():
+    """An empty secret used to pass config and fail later as PyJWT's
+    "HMAC key must not be empty" on the first login."""
+    for value in ("", "   "):
+        with pytest.raises(ValidationError, match="JWT_SECRET is empty"):
+            make(app_env="local", jwt_secret=value)
+
+
 def test_non_local_requires_strong_jwt_secret():
     with pytest.raises(ValidationError, match="JWT_SECRET"):
         make(app_env="prod", jwt_secret="change-me", gcs_endpoint_url="", pubsub_emulator_host="")

@@ -114,7 +114,14 @@ class Settings(BaseSettings):
         return "/".join([self.gcs_media_prefix, *parts])
 
     @model_validator(mode="after")
-    def _check_non_local(self) -> Settings:
+    def _check_secrets_and_env(self) -> Settings:
+        # An empty JWT_SECRET only shows up at the first login, as PyJWT's
+        # "HMAC key must not be empty". Refuse to start instead.
+        if not self.jwt_secret.strip():
+            raise ValueError(
+                "JWT_SECRET is empty, so access tokens cannot be signed. Set it in .env, "
+                "e.g. JWT_SECRET=$(openssl rand -hex 32)"
+            )
         if self.app_env != "local":
             if self.jwt_secret == INSECURE_JWT_SECRET or len(self.jwt_secret) < 32:
                 raise ValueError("JWT_SECRET must be a random value of at least 32 characters outside local")
