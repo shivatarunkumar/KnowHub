@@ -41,7 +41,7 @@ def test_non_local_rejects_emulators():
 
 def test_env_vars_are_read(monkeypatch):
     monkeypatch.setenv("GCS_BUCKET", "other-raw")
-    monkeypatch.setenv("AI_PROVIDER", "none")
+    monkeypatch.setenv("PROVIDER", "none")
     settings = make()
     assert settings.gcs_bucket == "other-raw"
-    assert settings.ai_provider == "none"
+    assert settings.provider == "none"

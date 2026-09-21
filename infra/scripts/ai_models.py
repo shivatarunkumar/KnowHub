@@ -6,10 +6,10 @@ of the app still comes up (uploads work without the writing assist).
 
 from __future__ import annotations
 
+import os
 import time
 
 import httpx
-from resources import env
 
 STARTUP_WAIT_SECONDS = 30  # Ollama in docker may still be starting
 
@@ -31,7 +31,9 @@ def fetch_tags(base_url: str) -> dict | None:
 
 
 def ensure_models(models: list[str]) -> None:
-    base_url = env("OLLAMA_BASE_URL").rstrip("/")
+    base_url = (
+        os.environ.get("LLM_API_BASE") or os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434"
+    ).rstrip("/")
     tags = fetch_tags(base_url)
     if tags is None:
         return

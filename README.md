@@ -56,12 +56,28 @@ as often as you like. `make db-reset` drops the database and rebuilds it from sc
 | API docs (Swagger) | http://localhost:8000/docs |
 | Health of every dependency | http://localhost:8000/api/v1/health |
 
-**Storage and AI.** Video files go to a GCS bucket (`GCS_BUCKET`, `knowhub-data` by
-default) under `raw/users/{user_id}/…` and `media/videos/{video_id}/…`. Locally you can
-point `GCS_ENDPOINT_URL` at the fake-gcs-server container instead, or use the real bucket
-with your own `gcloud auth application-default login` credentials — no service-account key
-is needed. The AI assist calls Ollama at `OLLAMA_BASE_URL` (`llama3.2`); set
-`AI_PROVIDER=none` to switch it off.
+**Storage.** Video files go to a GCS bucket (`GCS_BUCKET`, `knowhub-data` by default)
+under `raw/users/{user_id}/…` and `media/videos/{video_id}/…`. Locally you can point
+`GCS_ENDPOINT_URL` at the fake-gcs-server container instead, or use the real bucket with
+your own `gcloud auth application-default login` credentials — no service-account key is
+needed.
+
+**AI.** The writing assist runs on whichever provider `PROVIDER` names. Each has its own
+key and its own default model, so switching is usually two lines in `.env`:
+
+| `PROVIDER` | Key | Default `MODEL` |
+|---|---|---|
+| `openai` | `OPENAI_API_KEY` | `gpt-4.1-mini` |
+| `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-5` |
+| `gemini` | `GEMINI_API_KEY` | `gemini-2.5-flash` |
+| `vertex` | none — uses gcloud ADC | `gemini-2.5-flash` |
+| `ollama` | none — runs locally | `llama3.2` |
+| `none` | — | the assist is switched off |
+
+`MODEL` overrides the default. `LLM_API_BASE` overrides the endpoint, so
+`PROVIDER=openai` with `LLM_API_BASE=http://localhost:11434` talks to anything
+OpenAI-compatible — Ollama, vLLM, LiteLLM, a company proxy. Vertex needs
+`gcloud services enable aiplatform.googleapis.com` once per project.
 
 ### Set up a second machine
 
@@ -114,7 +130,7 @@ only reports a timeout; `make check-db` / `make check-gcp` tell you *why*:
 
 - `database` not ok → Postgres isn't running, `DATABASE_URL` is wrong, or `make db-init` hasn't been run
 - `storage` / `pubsub` timing out → almost always no Application Default Credentials, or a firewall/proxy between you and `*.googleapis.com`
-- `ai` not ok → Ollama isn't running, or the models aren't pulled (`ollama pull llama3.2`). This one only makes the status `degraded`; everything except the writing assist still works, and `AI_PROVIDER=none` silences it
+- `ai` not ok → the provider named by `PROVIDER` is unreachable: the API key is missing or rejected, the model name is wrong, or (for `ollama`) it isn't running. The message says which. This one only makes the status `degraded`; everything except the writing assist still works, and `PROVIDER=none` silences it
 
 ### Or run the whole stack in Docker
 

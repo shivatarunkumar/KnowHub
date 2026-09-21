@@ -10,14 +10,35 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 INSECURE_JWT_SECRET = "change-me"
 
+# Used when MODEL / LLM_API_BASE are left empty in .env.
+DEFAULT_MODELS = {
+    "openai": "gpt-4.1-mini",
+    "anthropic": "claude-sonnet-5",
+    "gemini": "gemini-2.5-flash",
+    "vertex": "gemini-2.5-flash",
+    "ollama": "llama3.2",
+}
+
+DEFAULT_API_BASES = {
+    "openai": "https://api.openai.com",
+    "anthropic": "https://api.anthropic.com",
+    "gemini": "https://generativelanguage.googleapis.com",
+    "ollama": "http://localhost:11434",
+    # vertex builds its host from the project and location instead
+}
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(extra="ignore")
+    model_config = SettingsConfigDict(
+        extra="ignore",
+        populate_by_name=True,  # tests and code can use the field names directly
+        protected_namespaces=(),  # "model" is a field here, not a pydantic internal
+    )
 
     # --- app ---
     app_env: Literal["local", "dev", "stage", "prod"] = "local"
@@ -68,14 +89,49 @@ class Settings(BaseSettings):
     bq_events_table: str = "events"
 
     # --- ai ---
-    ai_provider: Literal["ollama", "vertex", "none"] = "ollama"
-    ai_text_model: str = "llama3.2"
+    # One switch. Each provider brings its own key and its own default model; MODEL and
+    # LLM_API_BASE override those when you want a specific model or an OpenAI-compatible
+    # gateway (Ollama, vLLM, LiteLLM, a company proxy).
+    provider: Literal["openai", "anthropic", "gemini", "vertex", "ollama", "none"] = Field(
+        default="ollama", validation_alias=AliasChoices("PROVIDER", "AI_PROVIDER")
+    )
+    model: str = Field(default="", validation_alias=AliasChoices("MODEL", "AI_TEXT_MODEL"))
+    llm_api_base: str = Field(default="", validation_alias=AliasChoices("LLM_API_BASE", "OLLAMA_BASE_URL"))
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    gemini_api_key: str = ""
     ai_embedding_model: str = "nomic-embed-text"
     ai_embedding_dim: int = 768
-    ollama_base_url: str = "http://ollama:11434"
     # where the Vertex models live; empty falls back to GCP_REGION ("global" is allowed)
     vertex_location: str = ""
     ai_enhance_max_chars: int = 5000
+
+    @property
+    def ai_model(self) -> str:
+        """MODEL from .env, or the provider's default."""
+        return self.model.strip() or DEFAULT_MODELS.get(self.provider, "")
+
+    @property
+    def ai_base_url(self) -> str:
+        """LLM_API_BASE from .env, or the provider's own endpoint."""
+        return (self.llm_api_base or DEFAULT_API_BASES.get(self.provider, "")).rstrip("/")
+
+    @property
+    def ai_api_key(self) -> str:
+        return {
+            "openai": self.openai_api_key,
+            "anthropic": self.anthropic_api_key,
+            "gemini": self.gemini_api_key,
+        }.get(self.provider, "").strip()
+
+    @property
+    def ai_key_setting(self) -> str:
+        """The .env key to name when the provider rejects us for lack of one."""
+        return {
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "gemini": "GEMINI_API_KEY",
+        }.get(self.provider, "")
 
     @property
     def ai_location(self) -> str:
@@ -129,13 +185,20 @@ class Settings(BaseSettings):
                 "JWT_SECRET is empty, so access tokens cannot be signed. Set it in .env, "
                 "e.g. JWT_SECRET=$(openssl rand -hex 32)"
             )
-        # switching AI_PROVIDER without switching the model gives a puzzling 404 from the
-        # provider, so say it here instead
-        local_models = ("llama", "mistral", "qwen", "phi")
-        if self.ai_provider == "vertex" and self.ai_text_model.startswith(local_models):
+        # Pointing a cloud provider at a local model name gives a puzzling 404 from the
+        # provider, so say it here instead. An explicit LLM_API_BASE means the person is
+        # deliberately using an OpenAI-compatible gateway (Ollama, vLLM, a proxy), so the
+        # model name is theirs to choose.
+        local_models = ("llama", "mistral", "qwen", "phi", "gemma", "deepseek")
+        if (
+            self.provider in ("openai", "anthropic", "gemini", "vertex")
+            and not self.llm_api_base
+            and self.ai_model.startswith(local_models)
+        ):
             raise ValueError(
-                f"AI_PROVIDER=vertex but AI_TEXT_MODEL is '{self.ai_text_model}', which is an Ollama "
-                "model. Use a Vertex model, e.g. AI_TEXT_MODEL=gemini-2.5-flash"
+                f"PROVIDER={self.provider} but MODEL is '{self.ai_model}', which is a local model. "
+                f"Use one of that provider's models (default: {DEFAULT_MODELS[self.provider]}), "
+                "or set LLM_API_BASE if you are pointing at a compatible gateway"
             )
         if self.app_env != "local":
             if self.jwt_secret == INSECURE_JWT_SECRET or len(self.jwt_secret) < 32:

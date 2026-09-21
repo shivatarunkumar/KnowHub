@@ -61,14 +61,14 @@ def main() -> None:
         bq.ensure_bigquery(args.target)
 
     if "ai" in steps:
-        provider = os.environ.get("AI_PROVIDER", "none")
+        provider = os.environ.get("PROVIDER") or os.environ.get("AI_PROVIDER", "none")
         pull = os.environ.get("AI_PULL_MODELS", "true").lower() == "true"
         if provider == "ollama" and pull:
             import ai_models
 
             ai_models.ensure_models(resources.ai_models())
         else:
-            print(f"[provision] ai: skipped (AI_PROVIDER={provider}, AI_PULL_MODELS={pull})")
+            print(f"[provision] ai: skipped (PROVIDER={provider}, AI_PULL_MODELS={pull})")
 
     print("[provision] done")
 

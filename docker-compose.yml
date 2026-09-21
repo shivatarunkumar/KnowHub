@@ -48,7 +48,7 @@ services:
     build: ./infra/tools
     env_file: .env
     environment:
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL_DOCKER:-http://host.docker.internal:11434}
+      LLM_API_BASE: ${LLM_API_BASE_DOCKER:-${OLLAMA_BASE_URL_DOCKER:-http://host.docker.internal:11434}}
     volumes: [".:/workspace"]
     command: ["bash", "scripts/init.sh"]
     extra_hosts: ["host.docker.internal:host-gateway"]
@@ -65,7 +65,7 @@ services:
     env_file: .env
     environment:
       # inside a container "localhost" is the container itself
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL_DOCKER:-http://host.docker.internal:11434}
+      LLM_API_BASE: ${LLM_API_BASE_DOCKER:-${OLLAMA_BASE_URL_DOCKER:-http://host.docker.internal:11434}}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes: ["./backend:/app"]
     ports: ["${API_HOST_PORT:-8000}:8000"]

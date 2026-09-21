@@ -129,8 +129,8 @@ async def enhance(
     record = AIRequest(
         user_id=user_id,
         field=field,
-        provider=settings.ai_provider,
-        model=settings.ai_text_model,
+        provider=settings.provider,
+        model=settings.ai_model,
         input_chars=len(text),
         created_at=started,
     )

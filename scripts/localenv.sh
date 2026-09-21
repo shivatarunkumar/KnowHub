@@ -20,7 +20,7 @@ then open .env and set, for the host setup (Postgres + real GCP on your machine)
   GCP_PROJECT_ID                     the GCP project that owns the bucket and topics
   GCS_ENDPOINT_URL=                  leave empty for real GCS (set only for the emulator)
   PUBSUB_EMULATOR_HOST=              leave empty for real Pub/Sub
-  OLLAMA_BASE_URL                    where Ollama runs, or AI_PROVIDER=none
+  PROVIDER / MODEL / LLM_API_BASE    which LLM to use, or PROVIDER=none
 
 See the "Set up a second machine" section of the README.
 EOF
@@ -32,13 +32,14 @@ set -a
 . "$_root/.env"
 set +a
 
-for _var in DATABASE_URL POSTGRES_ADMIN_URL OLLAMA_BASE_URL GCS_ENDPOINT_URL PUBSUB_EMULATOR_HOST; do
+for _var in DATABASE_URL POSTGRES_ADMIN_URL LLM_API_BASE OLLAMA_BASE_URL GCS_ENDPOINT_URL PUBSUB_EMULATOR_HOST; do
   _value="${!_var:-}"
   [[ -z "$_value" ]] && continue
   _value="${_value//host.docker.internal/localhost}"
   _value="${_value//"@postgres:"/"@localhost:"}"
   _value="${_value//"//gcs:"/"//localhost:"}"
   _value="${_value//"pubsub:"/"localhost:"}"
+  _value="${_value//"//ollama:"/"//localhost:"}"
   export "$_var=$_value"
 done
 unset _var _value _root

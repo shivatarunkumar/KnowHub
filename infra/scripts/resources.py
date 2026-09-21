@@ -103,4 +103,7 @@ def subscriptions() -> list[SubscriptionSpec]:
 
 
 def ai_models() -> list[str]:
-    return [env("AI_TEXT_MODEL"), env("AI_EMBEDDING_MODEL")]
+    """Models to pull for a local Ollama. MODEL is the current name; AI_TEXT_MODEL is
+    what .env files written before the multi-provider switch used."""
+    text_model = os.environ.get("MODEL") or os.environ.get("AI_TEXT_MODEL") or "llama3.2"
+    return [text_model, env("AI_EMBEDDING_MODEL")]

@@ -257,7 +257,7 @@ The table below is the adapter matrix: each row is one config switch (§3.8).
 | Upload trigger | Browser calls `POST /uploads/{id}/complete` → publishes `video-uploaded` (fake-gcs has no bucket notifications) | Same call; GCS notification as backup. Worker is idempotent |
 | Video delivery | Served straight from fake-gcs URL | Cloud CDN |
 | Analytics | `analytics_events` table in Postgres | Pub/Sub → BigQuery subscription |
-| AI (LLM + embeddings) | Ollama: reuses Ollama already running on the host, otherwise runs it in docker (`ollama` compose profile). `AI_PROVIDER=none` disables AI | Vertex AI |
+| AI (LLM + embeddings) | Ollama, or any cloud provider by API key (`PROVIDER`). `PROVIDER=none` disables AI | Vertex AI on ADC, or the same cloud providers |
 | Workers | Pull subscribers as compose services — **not built yet**; the API does the work inline | Cloud Run (push) |
 
 Compose services: `postgres`, `gcs`, `pubsub`, `ollama`, `api`, `media-worker`, `notify-worker`, `embed-worker`, `web`, plus a one-off `init` job. It runs the provisioning scripts from §3.10: create DB → migrate → seed → buckets → Pub/Sub topics and subscriptions → AI models.
@@ -284,7 +284,7 @@ All settings live in **one typed config module**, `backend/app/core/config.py` (
 | pubsub | `PUBSUB_EMULATOR_HOST`, `PUBSUB_TOPIC_VIDEO_UPLOADED`, `…_TRANSCODE_EVENTS`, `…_VIDEO_PUBLISHED`, `…_VIDEO_METADATA_CHANGED`, `…_ANALYTICS_EVENTS`, subscription names | `pubsub:8085` | unset |
 | transcoder | `TRANSCODER_BACKEND` (`ffmpeg`/`gcp`), `TRANSCODER_LOCATION`, `TRANSCODER_PRESET` | `ffmpeg` | `gcp` |
 | analytics | `ANALYTICS_BACKEND` (`postgres`/`bigquery`), `BQ_DATASET`, `BQ_EVENTS_TABLE` | `postgres` | `bigquery` |
-| ai | `AI_PROVIDER` (`ollama`/`vertex`/`none`), `AI_TEXT_MODEL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIM`, `OLLAMA_BASE_URL`, `VERTEX_LOCATION`, `AI_ENHANCE_MAX_CHARS` | `ollama`, `llama3.2` (3B, ~2 GB), `nomic-embed-text`, `768` ⚙️ | `vertex`, `gemini-2.5-flash`, `text-embedding-005`, `768` ⚙️ |
+| ai | `PROVIDER` (`openai`/`anthropic`/`gemini`/`vertex`/`ollama`/`none`), `MODEL`, `LLM_API_BASE`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `VERTEX_LOCATION`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIM`, `AI_ENHANCE_MAX_CHARS` | `ollama`, `llama3.2` (3B, ~2 GB), `nomic-embed-text`, `768` | any cloud provider by key, or `vertex` on ADC |
 | limits | `MAX_VIDEO_BYTES`, `MAX_VIDEO_SECONDS`, `MAX_SHORT_SECONDS` | 5 GB, 7200, 60 | same |
 
 Code uses small **adapter interfaces** picked by these switches: `StorageService`, `EventBus`, `Transcoder`, `AnalyticsSink`, `TextGenerator`, `Embedder`. Moving from local to GCP only changes config.
@@ -302,21 +302,37 @@ Code uses small **adapter interfaces** picked by these switches: `StorageService
 - Future query path: `GET /search?mode=semantic|hybrid` → embed the query → `ORDER BY embedding <=> :q` (HNSW index), merged with full-text rank (reciprocal rank fusion).
 
 
-**Switching provider (built).** `AI_PROVIDER` picks the backend and nothing else changes:
+**Switching provider (built).** `PROVIDER` chooses where the writing assist runs. Each
+provider carries its own key and its own default model, so switching is usually two lines
+in `.env`:
 
-| | Ollama (laptop) | Vertex AI (cloud) |
-|---|---|---|
-| `AI_PROVIDER` | `ollama` | `vertex` |
-| `AI_TEXT_MODEL` | `llama3.2` | `gemini-2.5-flash` |
-| `AI_EMBEDDING_MODEL` | `nomic-embed-text` | `text-embedding-005` (both 768-dim, so `ai_embeddings` needs no change) |
-| Auth | none | Application Default Credentials, the same ones storage and Pub/Sub use |
-| Location | `OLLAMA_BASE_URL` | `VERTEX_LOCATION`, or `GCP_REGION` when empty |
+| `PROVIDER` | Key | Default `MODEL` | Endpoint |
+|---|---|---|---|
+| `openai` | `OPENAI_API_KEY` | `gpt-4.1-mini` | `https://api.openai.com` |
+| `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-5` | `https://api.anthropic.com` |
+| `gemini` | `GEMINI_API_KEY` | `gemini-2.5-flash` | `https://generativelanguage.googleapis.com` |
+| `vertex` | none — Application Default Credentials | `gemini-2.5-flash` | `{VERTEX_LOCATION or GCP_REGION}-aiplatform.googleapis.com` |
+| `ollama` | none — runs locally | `llama3.2` | `LLM_API_BASE` |
+| `none` | — | — | the assist is switched off |
 
-Vertex is called over its REST API with httpx and an ADC bearer token, so it adds no SDK
-dependency, and `x-goog-user-project` attributes the call to `GCP_PROJECT_ID`. Per project
-it needs `gcloud services enable aiplatform.googleapis.com` once, and the account needs
-`roles/aiplatform.user`. `/api/v1/health` checks the provider with `countTokens`, which
-costs nothing but still proves credentials, the enabled API and the model name.
+- **`MODEL`** overrides the default. **`LLM_API_BASE`** overrides the endpoint, so
+  `PROVIDER=openai` with `LLM_API_BASE=http://localhost:11434` runs against anything
+  OpenAI-compatible — Ollama, vLLM, LiteLLM, a company proxy. A base that already ends in
+  `/v1` is not doubled.
+- Every provider is called over its REST API with httpx, so **no provider SDK is a
+  dependency**. Three request shapes cover all five: OpenAI chat completions, Anthropic
+  messages, and Gemini `generateContent` (shared by AI Studio and Vertex, which differ only
+  in host and auth).
+- Keys never reach a URL: Gemini's travels in the `x-goog-api-key` header rather than the
+  query string, so it cannot end up in an access log.
+- Failures name their own fix: a missing or rejected key names the `.env` setting, an
+  unknown model names `MODEL`, a disabled Vertex API gives the `gcloud services enable`
+  command, and blocked or truncated answers are reported rather than returned as silence.
+- `/api/v1/health` checks the live provider — a models listing for OpenAI, Anthropic and
+  Gemini, `countTokens` for Vertex (free, but still proves credentials, the enabled API and
+  the model), `/api/tags` for Ollama.
+- The older `AI_PROVIDER`, `AI_TEXT_MODEL` and `OLLAMA_BASE_URL` names still work, so an
+  existing `.env` keeps running.
 
 ### 3.10 Database & resource provisioning (everything by script, zero manual steps)
 **Principle:** a new machine (or a new GCP project) goes from empty to fully working by running scripts. No clicking in consoles and no hand-typed SQL. Every script is:
@@ -408,7 +424,7 @@ Setup order is always: `init_db.sql` → migrations → seeds.
 | DB migrations | Plain versioned SQL in `database/postgres/migrations` + Python runner (`migrate.py`) ⚙️ | DDL is readable SQL, tool-independent, checksum-protected |
 | Provisioning | Python scripts (google-cloud client libs, `gcloud` where needed) in `infra/scripts` | Same script for emulators and GCP; no manual setup |
 | CI/CD | GitHub Actions → Artifact Registry → Cloud Run | |
-| AI | Vertex AI (Gemini) on GCP or Ollama locally — one `AI_PROVIDER` switch, both called over plain HTTP; `pgvector` for vectors | Writing assist now, semantic search later, all in the same DB |
+| AI | OpenAI, Anthropic, Gemini, Vertex AI or Ollama behind one `PROVIDER` switch, all called over plain HTTP with no SDK; `pgvector` for vectors | Writing assist now, semantic search later, all in the same DB |
 | Config | pydantic-settings, `.env` / `.env.example`, backend switches | One place for all GCP and app settings |
 | Local dev | docker-compose: Postgres+pgvector, fake-gcs-server, Pub/Sub emulator, Ollama, FFmpeg worker | Every feature runs on a laptop (§3.7) |
 | Testing | pytest + httpx (API), Playwright (UI) | |

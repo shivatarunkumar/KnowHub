@@ -66,12 +66,12 @@ if [[ ! -f .env ]]; then
   set_env JWT_SECRET "$secret"
   if curl -sf -m 3 http://localhost:11434/api/tags >/dev/null 2>&1; then
     echo "    Ollama is already running on this machine: using it (no extra download)"
-    set_env OLLAMA_BASE_URL "http://localhost:11434"
+    set_env LLM_API_BASE "http://localhost:11434"
     set_env COMPOSE_PROFILES ""
   else
     echo "    no Ollama on this machine: it will run in docker (profile 'ollama')"
-    set_env OLLAMA_BASE_URL "http://localhost:11434"
-    set_env OLLAMA_BASE_URL_DOCKER "http://ollama:11434"
+    set_env LLM_API_BASE "http://localhost:11434"
+    set_env LLM_API_BASE_DOCKER "http://ollama:11434"
     set_env COMPOSE_PROFILES "ollama"
   fi
 else
