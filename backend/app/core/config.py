@@ -73,7 +73,13 @@ class Settings(BaseSettings):
     ai_embedding_model: str = "nomic-embed-text"
     ai_embedding_dim: int = 768
     ollama_base_url: str = "http://ollama:11434"
+    # where the Vertex models live; empty falls back to GCP_REGION ("global" is allowed)
+    vertex_location: str = ""
     ai_enhance_max_chars: int = 5000
+
+    @property
+    def ai_location(self) -> str:
+        return self.vertex_location or self.gcp_region
 
     # --- engagement ---
     # how long after posting a comment can still be edited
@@ -122,6 +128,14 @@ class Settings(BaseSettings):
             raise ValueError(
                 "JWT_SECRET is empty, so access tokens cannot be signed. Set it in .env, "
                 "e.g. JWT_SECRET=$(openssl rand -hex 32)"
+            )
+        # switching AI_PROVIDER without switching the model gives a puzzling 404 from the
+        # provider, so say it here instead
+        local_models = ("llama", "mistral", "qwen", "phi")
+        if self.ai_provider == "vertex" and self.ai_text_model.startswith(local_models):
+            raise ValueError(
+                f"AI_PROVIDER=vertex but AI_TEXT_MODEL is '{self.ai_text_model}', which is an Ollama "
+                "model. Use a Vertex model, e.g. AI_TEXT_MODEL=gemini-2.5-flash"
             )
         if self.app_env != "local":
             if self.jwt_secret == INSECURE_JWT_SECRET or len(self.jwt_secret) < 32:

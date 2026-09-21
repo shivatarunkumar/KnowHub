@@ -284,7 +284,7 @@ All settings live in **one typed config module**, `backend/app/core/config.py` (
 | pubsub | `PUBSUB_EMULATOR_HOST`, `PUBSUB_TOPIC_VIDEO_UPLOADED`, `…_TRANSCODE_EVENTS`, `…_VIDEO_PUBLISHED`, `…_VIDEO_METADATA_CHANGED`, `…_ANALYTICS_EVENTS`, subscription names | `pubsub:8085` | unset |
 | transcoder | `TRANSCODER_BACKEND` (`ffmpeg`/`gcp`), `TRANSCODER_LOCATION`, `TRANSCODER_PRESET` | `ffmpeg` | `gcp` |
 | analytics | `ANALYTICS_BACKEND` (`postgres`/`bigquery`), `BQ_DATASET`, `BQ_EVENTS_TABLE` | `postgres` | `bigquery` |
-| ai | `AI_PROVIDER` (`ollama`/`vertex`), `AI_TEXT_MODEL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIM`, `OLLAMA_BASE_URL`, `AI_ENHANCE_MAX_CHARS` | `ollama`, `llama3.2` (3B, ~2 GB), `nomic-embed-text`, `768` ⚙️ | `vertex`, `gemini-2.5-flash`, `text-embedding-005`, `768` ⚙️ |
+| ai | `AI_PROVIDER` (`ollama`/`vertex`/`none`), `AI_TEXT_MODEL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIM`, `OLLAMA_BASE_URL`, `VERTEX_LOCATION`, `AI_ENHANCE_MAX_CHARS` | `ollama`, `llama3.2` (3B, ~2 GB), `nomic-embed-text`, `768` ⚙️ | `vertex`, `gemini-2.5-flash`, `text-embedding-005`, `768` ⚙️ |
 | limits | `MAX_VIDEO_BYTES`, `MAX_VIDEO_SECONDS`, `MAX_SHORT_SECONDS` | 5 GB, 7200, 60 | same |
 
 Code uses small **adapter interfaces** picked by these switches: `StorageService`, `EventBus`, `Transcoder`, `AnalyticsSink`, `TextGenerator`, `Embedder`. Moving from local to GCP only changes config.
@@ -300,6 +300,23 @@ Code uses small **adapter interfaces** picked by these switches: `StorageService
 - Each row stores `model` and `dim`. Switching models means a re-embed job (`python -m app.scripts.reembed`), because vectors from different models aren't comparable.
 - A backfill script embeds existing videos.
 - Future query path: `GET /search?mode=semantic|hybrid` → embed the query → `ORDER BY embedding <=> :q` (HNSW index), merged with full-text rank (reciprocal rank fusion).
+
+
+**Switching provider (built).** `AI_PROVIDER` picks the backend and nothing else changes:
+
+| | Ollama (laptop) | Vertex AI (cloud) |
+|---|---|---|
+| `AI_PROVIDER` | `ollama` | `vertex` |
+| `AI_TEXT_MODEL` | `llama3.2` | `gemini-2.5-flash` |
+| `AI_EMBEDDING_MODEL` | `nomic-embed-text` | `text-embedding-005` (both 768-dim, so `ai_embeddings` needs no change) |
+| Auth | none | Application Default Credentials, the same ones storage and Pub/Sub use |
+| Location | `OLLAMA_BASE_URL` | `VERTEX_LOCATION`, or `GCP_REGION` when empty |
+
+Vertex is called over its REST API with httpx and an ADC bearer token, so it adds no SDK
+dependency, and `x-goog-user-project` attributes the call to `GCP_PROJECT_ID`. Per project
+it needs `gcloud services enable aiplatform.googleapis.com` once, and the account needs
+`roles/aiplatform.user`. `/api/v1/health` checks the provider with `countTokens`, which
+costs nothing but still proves credentials, the enabled API and the model name.
 
 ### 3.10 Database & resource provisioning (everything by script, zero manual steps)
 **Principle:** a new machine (or a new GCP project) goes from empty to fully working by running scripts. No clicking in consoles and no hand-typed SQL. Every script is:
@@ -391,7 +408,7 @@ Setup order is always: `init_db.sql` → migrations → seeds.
 | DB migrations | Plain versioned SQL in `database/postgres/migrations` + Python runner (`migrate.py`) ⚙️ | DDL is readable SQL, tool-independent, checksum-protected |
 | Provisioning | Python scripts (google-cloud client libs, `gcloud` where needed) in `infra/scripts` | Same script for emulators and GCP; no manual setup |
 | CI/CD | GitHub Actions → Artifact Registry → Cloud Run | |
-| AI | Vertex AI (Gemini, text-embedding) on GCP; Ollama locally; `pgvector` for vectors ⚙️ | Writing assist now, semantic search later, all in the same DB |
+| AI | Vertex AI (Gemini) on GCP or Ollama locally — one `AI_PROVIDER` switch, both called over plain HTTP; `pgvector` for vectors | Writing assist now, semantic search later, all in the same DB |
 | Config | pydantic-settings, `.env` / `.env.example`, backend switches | One place for all GCP and app settings |
 | Local dev | docker-compose: Postgres+pgvector, fake-gcs-server, Pub/Sub emulator, Ollama, FFmpeg worker | Every feature runs on a laptop (§3.7) |
 | Testing | pytest + httpx (API), Playwright (UI) | |
