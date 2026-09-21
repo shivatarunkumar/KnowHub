@@ -30,7 +30,7 @@ export function TopBar({ onMenu, user }: { onMenu: () => void; user: SessionUser
         </button>
         <Link href="/" className="flex items-center gap-1.5" aria-label="KnowHub home">
           <LogoMark />
-          <span className="text-lg font-semibold tracking-tight">KnowHub</span>
+          <span className="display text-lg tracking-tight">KnowHub</span>
         </Link>
       </div>
 

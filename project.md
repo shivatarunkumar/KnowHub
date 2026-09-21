@@ -4,13 +4,13 @@ _Living document. Status: v0.5 · Phases 0–3 built, Phase 5 mostly built · La
 > **Current target: run everything locally.** Every feature (auth, upload, playback, search, engagement, notifications, AI writing help) must work on a laptop, set up by scripts with no manual steps: `make install` → `make db-init` → `make api` + `make web` on the host, or `./scripts/bootstrap.sh` for the full Docker stack. GCP deployment comes later and is a config switch, not a rewrite. See §1.1, §3.7, §3.8 and §3.10.
 
 ## 1. Overview
-KnowHub is an internal video and shorts platform for engineering knowledge, modeled on YouTube. Engineers upload videos and shorts that explain bug fixes, incident resolutions, how-tos and reusable work. Anyone in the company can come and search for "how did we fix X?" and watch the answer.
+KnowHub — the name is short for **Knowledge Hub** — is an internal video and shorts platform for engineering knowledge, modeled on YouTube. Engineers upload videos and shorts that explain bug fixes, incident resolutions, how-tos and reusable work. Anyone in the company can come and search for "how did we fix X?" and watch the answer.
 
 **Goals**
 - Make it quick to find and watch an existing resolution before re-solving a problem.
 - Make it easy to record and upload a fix with rich context (topic, incident, ticket, repo).
 - Tell people when new content appears on topics they care about (e.g. BigQuery, Pub/Sub).
-- Feel familiar: a YouTube-like UI and interactions, with our own fonts and colors.
+- Feel familiar: a YouTube-like UI and interactions, with our own fonts and colors — a deep forest green with warm cream surfaces, Source Serif 4 for display type and Figtree for everything else. Colours are tokens in `globals.css`; no component names a colour.
 
 **Access model**
 | Action | Anonymous | Logged in |

@@ -9,7 +9,8 @@ import {
 
 export const metadata = {
   title: "About KnowHub",
-  description: "What KnowHub is, why it exists, and how it works under the hood.",
+  description:
+    "KnowHub — a Knowledge Hub for engineering. What it is, why it exists, and how it works.",
 };
 
 const SECTIONS = [
@@ -31,6 +32,17 @@ export default function AboutPage() {
       <h1 className="mt-1 text-3xl font-semibold leading-tight sm:text-4xl">
         KnowHub is YouTube for how we fixed things.
       </h1>
+
+      {/* the name itself: Knowledge + Hub */}
+      <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg">
+        <span className="font-semibold">
+          <span className="text-brand">Know</span>ledge <span className="text-brand">Hub</span>
+        </span>
+        <span className="text-muted">
+          — one place where what we work out is kept, and found again.
+        </span>
+      </p>
+
       <p className="mt-4 text-lg leading-relaxed text-muted">
         When someone solves a gnarly bug, resolves an incident or works out how a service really
         behaves, that knowledge normally lives in one person&apos;s head, a closed thread, or a
@@ -269,7 +281,7 @@ const STACK: [string, string, string][] = [
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="mt-12 scroll-mt-20 border-t border-line pt-8">
-      <h2 className="text-xl font-semibold">{title}</h2>
+      <h2 className="display text-2xl">{title}</h2>
       <div className="mt-3 leading-relaxed">{children}</div>
     </section>
   );

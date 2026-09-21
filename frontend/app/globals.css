@@ -1,36 +1,47 @@
 @import "tailwindcss";
 
-/* KnowHub palette: YouTube-like layout, our own colors (indigo instead of red). */
+/* KnowHub palette: a deep forest green with warm cream surfaces, a lime accent for
+   highlights, and a serif for display type. Every colour is a token — components never
+   name a colour, so light and dark mode both follow from here. */
 :root {
+  color-scheme: light;
   --bg: #ffffff;
-  --surface: #f2f2f5;
-  --surface-hover: #e5e5eb;
-  --text: #111118;
-  --muted: #5d5e6c;
-  --border: #e2e2e8;
-  --brand: #4f46e5;
-  --brand-hover: #4338ca;
+  --surface: #f2f1ea;
+  --surface-hover: #e7e5db;
+  --text: #11241d;
+  --muted: #586b62;
+  --border: #dedcd1;
+  --brand: #14543e;
+  --brand-hover: #0d3f2d;
   --brand-contrast: #ffffff;
-  --chip-active: #111118;
+  --accent: #6fa82f;
+  --accent-contrast: #11241d;
+  --chip-active: #14543e;
   --chip-active-text: #ffffff;
-  --ok: #16a34a;
-  --warn: #d97706;
-  --bad: #dc2626;
+  --ok: #17794f;
+  --warn: #a2660f;
+  --bad: #b4342a;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f0f13;
-    --surface: #1d1d24;
-    --surface-hover: #2a2a33;
-    --text: #f1f1f4;
-    --muted: #a3a3b1;
-    --border: #2a2a33;
-    --brand: #818cf8;
-    --brand-hover: #a5b4fc;
-    --brand-contrast: #0f0f13;
-    --chip-active: #f1f1f4;
-    --chip-active-text: #0f0f13;
+    color-scheme: dark;
+    --bg: #0b1a14;
+    --surface: #12271f;
+    --surface-hover: #1b352b;
+    --text: #e9f0ec;
+    --muted: #9db0a7;
+    --border: #1e382d;
+    --brand: #6cc295;
+    --brand-hover: #92d7b1;
+    --brand-contrast: #06140f;
+    --accent: #a4d44f;
+    --accent-contrast: #06140f;
+    --chip-active: #e9f0ec;
+    --chip-active-text: #0b1a14;
+    --ok: #58c08a;
+    --warn: #d8a34a;
+    --bad: #e57a70;
   }
 }
 
@@ -46,16 +57,31 @@
   --color-brand-contrast: var(--brand-contrast);
   --color-chip-active: var(--chip-active);
   --color-chip-active-text: var(--chip-active-text);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Loaded in app/layout.tsx from Google Fonts. If that is blocked — a locked-down
+     network, offline — the next family in each stack takes over and the app still
+     looks deliberate. */
+  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
 }
 
 html,
 body {
   background: var(--bg);
   color: var(--text);
+}
+
+/* Page titles are set in the serif; everything structural (nav, labels, buttons) stays
+   in the sans, so the serif reads as voice rather than decoration. */
+h1,
+.display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .no-scrollbar {

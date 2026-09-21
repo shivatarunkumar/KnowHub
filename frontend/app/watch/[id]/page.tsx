@@ -34,7 +34,7 @@ export default async function WatchPage({ params }: { params: Promise<{ id: stri
       <div className="min-w-0">
         <VideoPlayer videoId={video.id} />
 
-        <h1 className="mt-4 text-xl font-semibold leading-snug">{video.title}</h1>
+        <h1 className="mt-4 text-2xl leading-snug">{video.title}</h1>
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-contrast">

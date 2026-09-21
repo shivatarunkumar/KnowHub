@@ -1,8 +1,8 @@
 # KnowHub
 
-KnowHub is an internal video platform for engineering knowledge: bug fixes, incident
-resolutions, how-tos and reusable work, shared as videos and shorts instead of being
-re-solved from scratch. It looks and behaves like YouTube, in our own colors.
+KnowHub — short for **Knowledge Hub** — is an internal video platform for engineering
+knowledge: bug fixes, incident resolutions, how-tos and reusable work, shared as videos and
+shorts instead of being re-solved from scratch. It looks and behaves like YouTube, in our own colors.
 
 Everything runs on a laptop today — Postgres, the API, the web app, file storage and the
 AI writing assist. GCP deployment is a config switch, not a rewrite (§3.8 of

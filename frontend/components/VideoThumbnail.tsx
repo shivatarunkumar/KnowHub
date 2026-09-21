@@ -5,11 +5,15 @@ import type { Video } from "@/lib/api";
 import { formatDurationBadge } from "@/lib/thumbnail";
 import { ShortsIcon } from "./icons";
 
-/** Hue derived from the id, so a video's cover colour is stable but varies between videos. */
+/**
+ * Hue derived from the id, so a video's cover colour is stable but varies between videos.
+ * Kept inside the brand's green-to-teal range (110°–200°) so a full grid of generated
+ * covers still looks like one product.
+ */
 function hueFor(id: string): number {
   let hash = 0;
   for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) % 360;
-  return hash;
+  return 110 + (hash % 90);
 }
 
 /**
@@ -39,7 +43,7 @@ export function VideoThumbnail({ video, rounded = "rounded-xl" }: { video: Video
           aria-hidden="true"
           className="flex h-full w-full flex-col items-center justify-center gap-2 text-white"
           style={{
-            background: `linear-gradient(135deg, hsl(${hue} 55% 42%), hsl(${(hue + 40) % 360} 60% 28%))`,
+            background: `linear-gradient(135deg, hsl(${hue} 42% 32%), hsl(${hue + 25} 48% 18%))`,
           }}
         >
           <span className="rounded-full bg-black/25 px-3 py-1 text-[11px] font-medium uppercase tracking-wide">
