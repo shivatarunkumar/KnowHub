@@ -44,7 +44,7 @@ export function Sidebar({
   const pathname = usePathname();
 
   if (!expanded) {
-    // Mini rail (desktop): icon + tiny label, like YouTube's collapsed guide.
+    // Mini rail (desktop): icon + tiny label, for when the guide is collapsed.
     return (
       <nav aria-label="Main" className="flex flex-col items-center gap-1 px-1 pt-1">
         {[...MAIN, { href: "/about", label: "About", icon: InfoIcon }].map(({ href, label, icon: Icon }) => (

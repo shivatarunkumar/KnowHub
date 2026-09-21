@@ -30,7 +30,7 @@ export default function AboutPage() {
       {/* ---------------------------------------------------------------- hero */}
       <p className="text-sm font-medium text-brand">About</p>
       <h1 className="mt-1 text-3xl font-semibold leading-tight sm:text-4xl">
-        KnowHub is YouTube for how we fixed things.
+        A video library of how we actually fixed things.
       </h1>
 
       {/* the name itself: Knowledge + Hub */}

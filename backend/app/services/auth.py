@@ -31,7 +31,7 @@ class AuthError(Exception):
 
 # ------------------------------------------------------------------ registration
 def handle_from_email(email: str) -> str:
-    """tarun.nagula@corp.com → tarun.nagula (a channel handle, like @tarun on YouTube)."""
+    """tarun.nagula@corp.com → tarun.nagula (a channel handle, written @tarun)."""
     base = HANDLE_RE.sub("", email.split("@", 1)[0].lower()).strip("._-")
     base = base or "user"
     if len(base) < 3:

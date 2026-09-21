@@ -6,7 +6,7 @@ import type { SessionUser } from "@/lib/session";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
-// YouTube-style frame: fixed top bar, guide sidebar (full ↔ mini on desktop,
+// App frame: fixed top bar, guide sidebar (full ↔ mini on desktop,
 // slide-over drawer on small screens), scrolling content area.
 export function AppShell({
   topics,

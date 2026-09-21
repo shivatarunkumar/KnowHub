@@ -4,13 +4,13 @@ _Living document. Status: v0.5 · Phases 0–3 built, Phase 5 mostly built · La
 > **Current target: run everything locally.** Every feature (auth, upload, playback, search, engagement, notifications, AI writing help) must work on a laptop, set up by scripts with no manual steps: `make install` → `make db-init` → `make api` + `make web` on the host, or `./scripts/bootstrap.sh` for the full Docker stack. GCP deployment comes later and is a config switch, not a rewrite. See §1.1, §3.7, §3.8 and §3.10.
 
 ## 1. Overview
-KnowHub — the name is short for **Knowledge Hub** — is an internal video and shorts platform for engineering knowledge, modeled on YouTube. Engineers upload videos and shorts that explain bug fixes, incident resolutions, how-tos and reusable work. Anyone in the company can come and search for "how did we fix X?" and watch the answer.
+KnowHub — the name is short for **Knowledge Hub** — is an internal video and shorts platform for engineering knowledge, built the way people already expect a video site to work. Engineers upload videos and shorts that explain bug fixes, incident resolutions, how-tos and reusable work. Anyone in the company can come and search for "how did we fix X?" and watch the answer.
 
 **Goals**
 - Make it quick to find and watch an existing resolution before re-solving a problem.
 - Make it easy to record and upload a fix with rich context (topic, incident, ticket, repo).
 - Tell people when new content appears on topics they care about (e.g. BigQuery, Pub/Sub).
-- Feel familiar: a YouTube-like UI and interactions, with our own fonts and colors — a deep forest green with warm cream surfaces, Source Serif 4 for display type and Figtree for everything else. Colours are tokens in `globals.css`; no component names a colour.
+- Feel familiar: the interactions people already know from any video site, with our own fonts and colors — a deep forest green with warm cream surfaces, Source Serif 4 for display type and Figtree for everything else. Colours are tokens in `globals.css`; no component names a colour.
 
 **Access model**
 | Action | Anonymous | Logged in |
@@ -62,7 +62,7 @@ for what each phase covers.
 printing the command that fixes it. `/api/v1/health` reports the same dependencies at
 runtime but can only say "timed out"; these say why.
 
-## 2. Features (YouTube parity, adapted)
+## 2. Features (what people expect from a video platform, adapted)
 
 ### 2.1 Viewing
 - **Home feed**: grid of video cards (thumbnail, duration, title, uploader, views, age). New and anonymous visitors see *Latest + Trending*. Logged-in users also see *From your subscriptions* and *Recommended for your topics*.
@@ -73,10 +73,10 @@ runtime but can only say "timed out"; these say why.
 - **Search**: search bar with autocomplete. Results page with filters (type: video/short, topic, category, upload date, duration) and sort (relevance, date, views).
 
 ### 2.2 Uploading (login required)
-- Upload dialog, like YouTube Studio. Drag and drop the file, then fill in details while it uploads.
+- Upload dialog, like a creator studio. Drag and drop the file, then fill in details while it uploads.
 - **Required metadata**: title, description, type (Video / Short), primary topic (GCP service, e.g. BigQuery), category (Bug fix · Incident resolution · How-to · Knowledge share · Demo · Reusable component).
 - **Optional metadata**: additional topics, tags, incident ID, Jira ticket, repo/PR link, environment (prod/stage/dev), severity, custom thumbnail, visibility (Public-internal / Unlisted / Private / Draft), and more fields to come.
-- **✂️ Edit the video while it uploads** (basic YouTube Studio editor). The upload runs in the background while the user previews the video from the local file and edits it:
+- **✂️ Edit the video while it uploads** (a basic creator-studio editor). The upload runs in the background while the user previews the video from the local file and edits it:
   - **v1 (core):**
     - **Keep only the wanted time range(s):** drag start/end handles on a timeline to trim, and cut out unwanted segments in the middle (e.g. a password shown on screen, dead time). Multiple ranges can be kept and are joined in order.
     - **Crop the frame:** drag a crop box over the video (free or fixed ratio: 16:9, 9:16 for shorts, 1:1), e.g. to focus on one terminal window or hide a sidebar.
@@ -96,7 +96,7 @@ runtime but can only say "timed out"; these say why.
 - Shorts validation: vertical or square, ≤ 60s (configurable).
 
 ### 2.3 Engagement (login required)
-- Like / dislike (like count shown, dislike private, as on YouTube).
+- Like / dislike (like count shown, dislike count private).
 - Comments with one level of replies, likes on comments, sort by top/newest, edit/delete own, uploader can pin.
 - **Share (within KnowHub)**: share a video or short with other KnowHub users (pick users → they get an in-app notification and it appears in their "Shared with me" list), plus copy link / share at timestamp (`?t=123`). No external sharing (Slack/email) for now.
 - Save to Watch Later and to playlists.
@@ -104,7 +104,7 @@ runtime but can only say "timed out"; these say why.
 
 ### 2.4 Subscriptions & notifications
 - **Topic subscriptions**: subscribe to a topic (e.g. BigQuery). When a video on that topic is published, subscribers get a notification.
-- **Channel subscriptions**: subscribe to an uploader, as on YouTube.
+- **Channel subscriptions**: subscribe to an uploader.
 - Notification bell with unread count and a list. Mark read / mark all read.
 - Delivery: in-app only (bell). Notifications stay inside the application.
 - Subscriptions page: feed of videos from subscribed topics and channels.
@@ -183,7 +183,7 @@ _Locally, each GCP box is replaced by an emulator or local equivalent. See §3.7
 ### 3.2 Components
 | Component | Tech | Responsibility |
 |---|---|---|
-| **web** | Next.js (React, TypeScript) on Cloud Run ⚙️ | YouTube-like UI, SSR for home and watch pages |
+| **web** | Next.js (React, TypeScript) on Cloud Run ⚙️ | The video-site UI, SSR for home and watch pages |
 | **api** | FastAPI on Cloud Run | Auth, users, videos, search, comments, likes, subscriptions, notifications, signed URLs |
 | **media-worker** | Python on Cloud Run (Pub/Sub push) | Reacts to uploads: probes the file, starts Transcoder jobs, marks videos READY/FAILED |
 | **notify-worker** | Python on Cloud Run (Pub/Sub push) | Sends `video-published` notifications to topic and channel subscribers, and delivers in-app shares |
@@ -376,7 +376,7 @@ Setup order is always: `init_db.sql` → migrations → seeds.
 ## 4. Tech Stack
 | Layer | Choice | Why |
 |---|---|---|
-| Frontend | Next.js 16 + React 19 + TypeScript (Node 24 in containers), Tailwind CSS, TanStack Query, hls.js ⚙️ | Fast first load with SSR, rich ecosystem, easy YouTube-style layout |
+| Frontend | Next.js 16 + React 19 + TypeScript (Node 24 in containers), Tailwind CSS, TanStack Query, hls.js ⚙️ | Fast first load with SSR, rich ecosystem, easy video-site layout |
 | Backend | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async) + asyncpg | Chosen by the project. Async, typed, auto OpenAPI docs |
 | Auth | pwdlib[argon2], PyJWT | Standard, secure |
 | DB | Cloud SQL PostgreSQL 16 (+ `pg_trgm`, later `pgvector`) | Chosen by the project. Full-text search built in |
@@ -488,9 +488,9 @@ KnowHub/
 | **1. Auth & users** | users/refresh_tokens tables, register/login/refresh/logout/me, login UI, protected routes | Users can sign up and log in |
 | **2. Upload pipeline + AI assist** ✅ built (no transcoding yet) | Signed-URL upload, per-user GCS folders, upload dialog with metadata, **"Improve with AI" for title/description/tags**, upload_events audit, media-worker (FFmpeg locally), **embed-worker storing title+description embeddings** | Upload → processed HLS, AI-polished metadata, embeddings stored |
 | **2b. Video editor** | In-browser editor: timeline to keep wanted time range(s) (trim/cut), crop box, thumbnail frame with local preview during upload; `video_edits` table; worker applies edit list (FFmpeg / Transcoder `editList`); re-edit after upload with versioned output | Users edit while uploading |
-| **3. Watch & home** | Home feed, watch page with HLS player, channel page **(built: §2.5)**, view counts, YouTube-style layout (top bar, sidebar, chips) | Anonymous users can browse and watch |
+| **3. Watch & home** | Home feed, watch page with HLS player, channel page **(built: §2.5)**, view counts, the familiar layout (top bar, sidebar, chips) | Anonymous users can browse and watch |
 | **4. Search** | Postgres FTS + trigram, filters, suggestions, results page | Users can find resolutions |
-| **5. Engagement** | Likes/dislikes, comments and replies, in-app share to users + copy link/timestamp, Watch Later, playlists, history | YouTube-like interaction |
+| **5. Engagement** | Likes/dislikes, comments and replies, in-app share to users + copy link/timestamp, Watch Later, playlists, history | The interactions people expect |
 | **6. Subscriptions & notifications** | Topic and channel subscriptions, video-published Pub/Sub, notify-worker, bell UI, subscriptions feed | "New BigQuery resolution uploaded" alerts |
 | **7. Shorts** | Shorts validation, vertical swipe feed, Shorts shelf on home | Shorts experience |
 | **8. Studio & analytics** | Studio dashboard, analytics sink (Postgres locally / BigQuery on GCP), trending query, per-video stats | Creators see impact |
