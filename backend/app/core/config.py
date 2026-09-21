@@ -10,7 +10,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 INSECURE_JWT_SECRET = "change-me"
@@ -22,6 +22,14 @@ DEFAULT_MODELS = {
     "gemini": "gemini-2.5-flash",
     "vertex": "gemini-2.5-flash",
     "ollama": "llama3.2",
+}
+
+# Which provider owns a hostname, so a base URL pointing at the wrong one is caught.
+CLOUD_HOSTS = {
+    "api.openai.com": "openai",
+    "api.anthropic.com": "anthropic",
+    "generativelanguage.googleapis.com": "gemini",
+    "aiplatform.googleapis.com": "vertex",
 }
 
 DEFAULT_API_BASES = {
@@ -96,7 +104,11 @@ class Settings(BaseSettings):
         default="ollama", validation_alias=AliasChoices("PROVIDER", "AI_PROVIDER")
     )
     model: str = Field(default="", validation_alias=AliasChoices("MODEL", "AI_TEXT_MODEL"))
-    llm_api_base: str = Field(default="", validation_alias=AliasChoices("LLM_API_BASE", "OLLAMA_BASE_URL"))
+    llm_api_base: str = Field(
+        default="",  # LLM_BASE_URL is the other name people reach for; OLLAMA_BASE_URL predates
+        # the multi-provider switch. All three mean the same thing.
+        validation_alias=AliasChoices("LLM_API_BASE", "LLM_BASE_URL", "OLLAMA_BASE_URL"),
+    )
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     gemini_api_key: str = ""
@@ -105,6 +117,12 @@ class Settings(BaseSettings):
     # where the Vertex models live; empty falls back to GCP_REGION ("global" is allowed)
     vertex_location: str = ""
     ai_enhance_max_chars: int = 5000
+
+    @field_validator("provider", mode="before")
+    @classmethod
+    def _lowercase_provider(cls, value: str) -> str:
+        """PROVIDER=Anthropic and PROVIDER=anthropic mean the same thing."""
+        return value.strip().lower() if isinstance(value, str) else value
 
     @property
     def ai_model(self) -> str:
@@ -189,16 +207,30 @@ class Settings(BaseSettings):
         # provider, so say it here instead. An explicit LLM_API_BASE means the person is
         # deliberately using an OpenAI-compatible gateway (Ollama, vLLM, a proxy), so the
         # model name is theirs to choose.
+        # A base URL naming someone else's cloud is a mix-up, not a gateway: calling
+        # Anthropic's host with PROVIDER=openai can only fail.
+        owner = next((p for host, p in CLOUD_HOSTS.items() if host in self.llm_api_base), "")
+        if owner and owner != self.provider:
+            raise ValueError(
+                f"PROVIDER={self.provider} but LLM_API_BASE points at {owner}'s endpoint "
+                f"({self.llm_api_base}). Set PROVIDER={owner}, or leave the base empty to use "
+                f"{self.provider}'s own endpoint"
+            )
+
+        # Pointing a cloud provider at a local model name gives a puzzling 404, so say it
+        # here instead. A base URL that is NOT a known cloud host means a deliberate
+        # OpenAI-compatible gateway (Ollama, vLLM, a proxy), where the model is theirs to name.
+        using_gateway = bool(self.llm_api_base) and not owner
         local_models = ("llama", "mistral", "qwen", "phi", "gemma", "deepseek")
         if (
             self.provider in ("openai", "anthropic", "gemini", "vertex")
-            and not self.llm_api_base
+            and not using_gateway
             and self.ai_model.startswith(local_models)
         ):
             raise ValueError(
                 f"PROVIDER={self.provider} but MODEL is '{self.ai_model}', which is a local model. "
                 f"Use one of that provider's models (default: {DEFAULT_MODELS[self.provider]}), "
-                "or set LLM_API_BASE if you are pointing at a compatible gateway"
+                "or set LLM_API_BASE to a compatible gateway if that is what you meant"
             )
         if self.app_env != "local":
             if self.jwt_secret == INSECURE_JWT_SECRET or len(self.jwt_secret) < 32:

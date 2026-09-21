@@ -98,11 +98,32 @@ def test_the_old_env_names_still_work(monkeypatch):
     assert configured.ai_base_url == "http://localhost:11434"
 
 
+def test_the_other_base_url_spellings_are_accepted(monkeypatch):
+    """People write LLM_BASE_URL as often as LLM_API_BASE; both mean the endpoint."""
+    monkeypatch.setenv("PROVIDER", "anthropic")
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.anthropic.com")
+    assert Settings().ai_base_url == "https://api.anthropic.com"
+
+
+def test_provider_is_case_insensitive():
+    assert settings(provider="Anthropic").provider == "anthropic"
+    assert settings(provider="OpenAI").provider == "openai"
+
+
+def test_a_base_url_belonging_to_another_provider_is_refused():
+    """PROVIDER=openai with Anthropic's host can only fail, so say so at startup."""
+    with pytest.raises(ValueError, match="points at anthropic's endpoint"):
+        settings(provider="openai", llm_api_base="https://api.anthropic.com")
+
+
 def test_a_cloud_provider_with_a_local_model_is_refused():
     with pytest.raises(ValueError, match="which is a local model"):
         settings(provider="openai", model="llama3.2")
     # unless a gateway is named, where the model belongs to that gateway
     assert settings(provider="openai", model="llama3.2", llm_api_base="http://localhost:11434").ai_model
+    # ...but a real cloud host is not a gateway, so the guard still applies there
+    with pytest.raises(ValueError, match="which is a local model"):
+        settings(provider="anthropic", model="llama3.2", llm_api_base="https://api.anthropic.com")
 
 
 # ------------------------------------------------------------------ openai

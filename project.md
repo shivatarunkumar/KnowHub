@@ -315,10 +315,14 @@ in `.env`:
 | `ollama` | none — runs locally | `llama3.2` | `LLM_API_BASE` |
 | `none` | — | — | the assist is switched off |
 
-- **`MODEL`** overrides the default. **`LLM_API_BASE`** overrides the endpoint, so
-  `PROVIDER=openai` with `LLM_API_BASE=http://localhost:11434` runs against anything
-  OpenAI-compatible — Ollama, vLLM, LiteLLM, a company proxy. A base that already ends in
-  `/v1` is not doubled.
+- **`MODEL`** overrides the default. **`LLM_API_BASE`** overrides the endpoint — it is not
+  needed to reach OpenAI, Anthropic, Gemini or Vertex, which have their own. Setting it to
+  `http://localhost:11434` with `PROVIDER=openai` runs against anything OpenAI-compatible
+  — Ollama, vLLM, LiteLLM, a company proxy. A base that already ends in `/v1` is not
+  doubled, and `LLM_BASE_URL` / `OLLAMA_BASE_URL` are accepted as the same setting.
+- Two mix-ups are refused at startup rather than failing later as a confusing 404: a base
+  URL pointing at one provider's host while `PROVIDER` names another, and a local model
+  name (`llama…`, `mistral…`) on a cloud provider. `PROVIDER` is case-insensitive.
 - Every provider is called over its REST API with httpx, so **no provider SDK is a
   dependency**. Three request shapes cover all five: OpenAI chat completions, Anthropic
   messages, and Gemini `generateContent` (shared by AI Studio and Vertex, which differ only
