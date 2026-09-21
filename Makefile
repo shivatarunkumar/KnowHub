@@ -2,6 +2,7 @@
 #
 #   make install    install every dependency (backend, database/infra tools, frontend)
 #   make db-init    create the database, tables and seed data
+#   make check-all  verify the tools, the database and the GCP connection
 #   make api        run the API          make web    run the web app
 #   make            list every command
 #
@@ -17,8 +18,9 @@ TOOLS  := $(COMPOSE) run --rm init
 ARGS   ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help check install install-python install-web setup db-init db-reset db-status db-shell \
-        api web test lint bootstrap up down logs ps provision dump-schema clean
+.PHONY: help check check-db check-gcp check-all install install-python install-web setup \
+        db-init db-reset db-status db-shell api web test lint bootstrap up down logs ps \
+        provision dump-schema clean
 
 help:  ## list every command
 	@echo "KnowHub commands:"
@@ -77,6 +79,14 @@ db-shell:  ## open psql on the KnowHub database
 
 dump-schema:  ## regenerate database/postgres/schema/schema.sql
 	@source scripts/localenv.sh && ./database/scripts/dump_schema.sh
+
+check-db: | $(VENV)  ## verify the database: connection, schema, migrations, seeds
+	@source scripts/localenv.sh && $(PY) database/scripts/check_db.py $(ARGS)
+
+check-gcp: | $(VENV)  ## verify GCP: credentials, network, bucket, Pub/Sub topics
+	@source scripts/localenv.sh && $(PY) infra/scripts/check_gcp.py $(ARGS)
+
+check-all: check check-db check-gcp  ## run every check: tools, database, GCP
 
 # ---------------------------------------------------------------- run
 api: | $(VENV)  ## run the API at http://localhost:8000 (reloads on change)

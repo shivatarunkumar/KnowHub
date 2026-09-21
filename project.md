@@ -55,6 +55,11 @@ for what each phase covers.
 
 **Tests**: 65 backend, 10 database, plus the frontend type check (`make test`).
 
+**Connection checks**: `make check-db` and `make check-gcp` verify Postgres and GCP
+(config → network → credentials → bucket read/write → topics) outside the API, each check
+printing the command that fixes it. `/api/v1/health` reports the same dependencies at
+runtime but can only say "timed out"; these say why.
+
 ## 2. Features (YouTube parity, adapted)
 
 ### 2.1 Viewing

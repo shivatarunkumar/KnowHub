@@ -65,10 +65,11 @@ is needed. The AI assist calls Ollama at `OLLAMA_BASE_URL` (`llama3.2`); set
 
 `.env` is deliberately not in git (it holds your own database password and project), so a
 fresh clone starts from `.env.example`, whose defaults describe the **Docker** setup. For
-the host setup you must change five things:
+the host setup you must change six things:
 
 | Key | Set it to |
 |---|---|
+| `JWT_SECRET` | a fresh random value: `openssl rand -hex 32`. It is per-machine — never copy it between machines or into git |
 | `DATABASE_URL` | your local Postgres, e.g. `postgresql+asyncpg://tarun:12345@localhost:5432/knowhub` |
 | `POSTGRES_ADMIN_URL` | a superuser on the same server, e.g. `postgresql://postgres@localhost:5432/postgres` — `make db-init` uses it to create the role and database |
 | `GCP_PROJECT_ID` | the project that owns the bucket and the Pub/Sub topics (not `knowhub-local`) |
@@ -83,16 +84,35 @@ gcloud config set project <your-project>
 make db-init
 ```
 
-**If the API answers 503 on `/api/v1/health`,** that is the app telling you a *required*
-dependency is unreachable — it is not a crash. The response body names the one that failed:
+### Check the connections before starting anything
 
 ```bash
-curl -s localhost:8000/api/v1/health | python3 -m json.tool
+make check-db     # Postgres: reachable, role, database, extensions, migrations, seeds
+make check-gcp    # GCP: config, network, credentials, bucket read/write, topics
+make check-all    # the two above, plus the tool check
 ```
 
+Each prints one line per check and, when something fails, the command that fixes it:
+
+```
+[check-gcp] checking configuration, credentials, bucket and Pub/Sub
+
+  ok    config         project=my-project bucket=knowhub-data
+  ok    network        reached oauth2.googleapis.com, storage.googleapis.com, … on 443
+  FAIL  credentials    no Application Default Credentials on this machine
+                       → run: gcloud auth application-default login
+```
+
+They exit non-zero on failure, so you can chain them in a script. `check-gcp` uploads and
+deletes a small probe object to prove writes work; `--no-write` skips that.
+
+**If the API answers 503 on `/api/v1/health`,** that is the app telling you a *required*
+dependency is unreachable — it is not a crash. The body names the failing check, but it
+only reports a timeout; `make check-db` / `make check-gcp` tell you *why*:
+
 - `database` not ok → Postgres isn't running, `DATABASE_URL` is wrong, or `make db-init` hasn't been run
-- `storage` / `pubsub` not ok → wrong `GCP_PROJECT_ID`, or no Application Default Credentials
-- `ai` not ok → Ollama isn't running. This one only makes the status `degraded`; everything except the writing assist still works, and `AI_PROVIDER=none` silences it
+- `storage` / `pubsub` timing out → almost always no Application Default Credentials, or a firewall/proxy between you and `*.googleapis.com`
+- `ai` not ok → Ollama isn't running, or the models aren't pulled (`ollama pull llama3.2`). This one only makes the status `degraded`; everything except the writing assist still works, and `AI_PROVIDER=none` silences it
 
 ### Or run the whole stack in Docker
 
@@ -111,6 +131,7 @@ app. Useful on a machine where you'd rather not install Postgres.
 | Command | What it does |
 |---|---|
 | `make check` | verify python3, node, npm and psql are installed |
+| `make check-db` / `make check-gcp` / `make check-all` | verify the database and GCP connections without starting the API |
 | `make install` | install every dependency (backend, database/infra tools, frontend) |
 | `make db-init` / `make db-reset` | create or rebuild the database |
 | `make db-status` / `make db-shell` | list migrations / open psql |
