@@ -61,6 +61,39 @@ with your own `gcloud auth application-default login` credentials — no service
 is needed. The AI assist calls Ollama at `OLLAMA_BASE_URL` (`llama3.2`); set
 `AI_PROVIDER=none` to switch it off.
 
+### Set up a second machine
+
+`.env` is deliberately not in git (it holds your own database password and project), so a
+fresh clone starts from `.env.example`, whose defaults describe the **Docker** setup. For
+the host setup you must change five things:
+
+| Key | Set it to |
+|---|---|
+| `DATABASE_URL` | your local Postgres, e.g. `postgresql+asyncpg://tarun:12345@localhost:5432/knowhub` |
+| `POSTGRES_ADMIN_URL` | a superuser on the same server, e.g. `postgresql://postgres@localhost:5432/postgres` — `make db-init` uses it to create the role and database |
+| `GCP_PROJECT_ID` | the project that owns the bucket and the Pub/Sub topics (not `knowhub-local`) |
+| `GCS_ENDPOINT_URL` | **empty** — an empty value means real GCS; set it only for the emulator |
+| `PUBSUB_EMULATOR_HOST` | **empty**, for the same reason |
+
+Then authenticate to GCP once (no service-account key needed) and set up the database:
+
+```bash
+gcloud auth application-default login
+gcloud config set project <your-project>
+make db-init
+```
+
+**If the API answers 503 on `/api/v1/health`,** that is the app telling you a *required*
+dependency is unreachable — it is not a crash. The response body names the one that failed:
+
+```bash
+curl -s localhost:8000/api/v1/health | python3 -m json.tool
+```
+
+- `database` not ok → Postgres isn't running, `DATABASE_URL` is wrong, or `make db-init` hasn't been run
+- `storage` / `pubsub` not ok → wrong `GCP_PROJECT_ID`, or no Application Default Credentials
+- `ai` not ok → Ollama isn't running. This one only makes the status `degraded`; everything except the writing assist still works, and `AI_PROVIDER=none` silences it
+
 ### Or run the whole stack in Docker
 
 ```bash

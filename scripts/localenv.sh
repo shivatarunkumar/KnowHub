@@ -8,9 +8,28 @@ if [ -z "${BASH_VERSION:-}" ]; then
   return 1 2>/dev/null || exit 1
 fi
 
+_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ ! -f "$_root/.env" ]; then
+  cat >&2 <<'EOF'
+No .env file yet. On a new machine:
+
+  cp .env.example .env
+
+then open .env and set, for the host setup (Postgres + real GCP on your machine):
+  DATABASE_URL / POSTGRES_ADMIN_URL  your local Postgres user, password and port
+  GCP_PROJECT_ID                     the GCP project that owns the bucket and topics
+  GCS_ENDPOINT_URL=                  leave empty for real GCS (set only for the emulator)
+  PUBSUB_EMULATOR_HOST=              leave empty for real Pub/Sub
+  OLLAMA_BASE_URL                    where Ollama runs, or AI_PROVIDER=none
+
+See the "Set up a second machine" section of the README.
+EOF
+  return 1 2>/dev/null || exit 1
+fi
+
 set -a
 # shellcheck disable=SC1091
-. "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env"
+. "$_root/.env"
 set +a
 
 for _var in DATABASE_URL POSTGRES_ADMIN_URL OLLAMA_BASE_URL GCS_ENDPOINT_URL PUBSUB_EMULATOR_HOST; do
@@ -22,7 +41,7 @@ for _var in DATABASE_URL POSTGRES_ADMIN_URL OLLAMA_BASE_URL GCS_ENDPOINT_URL PUB
   _value="${_value//"pubsub:"/"localhost:"}"
   export "$_var=$_value"
 done
-unset _var _value
+unset _var _value _root
 
 # psql and other libpq tools don't understand SQLAlchemy driver prefixes
 # (postgresql+asyncpg://); PSQL_URL is the same connection without them.
