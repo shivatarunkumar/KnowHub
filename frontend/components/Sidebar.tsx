@@ -9,6 +9,7 @@ import { ApiStatus } from "./ApiStatus";
 import {
   ClockIcon,
   HistoryIcon,
+  InfoIcon,
   HomeIcon,
   PlaylistIcon,
   ShortsIcon,
@@ -46,7 +47,7 @@ export function Sidebar({
     // Mini rail (desktop): icon + tiny label, like YouTube's collapsed guide.
     return (
       <nav aria-label="Main" className="flex flex-col items-center gap-1 px-1 pt-1">
-        {[...MAIN, YOU[0]].map(({ href, label, icon: Icon }) => (
+        {[...MAIN, { href: "/about", label: "About", icon: InfoIcon }].map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -85,6 +86,18 @@ export function Sidebar({
           </Link>
         </div>
       )}
+      <Divider />
+      <h2 className="px-3 pb-1 pt-2 text-base font-semibold">KnowHub</h2>
+      <Link
+        href="/about"
+        className={`flex items-center gap-5 rounded-lg px-3 py-2 hover:bg-surface-hover ${
+          pathname === "/about" ? "bg-surface font-semibold" : ""
+        }`}
+      >
+        <InfoIcon width={22} height={22} />
+        What is KnowHub?
+      </Link>
+
       <Divider />
       <h2 className="px-3 pb-1 pt-2 text-base font-semibold">Topics</h2>
       {topics.length === 0 ? (

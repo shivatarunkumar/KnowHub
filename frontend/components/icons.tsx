@@ -202,3 +202,11 @@ export const EyeIcon = (p: IconProps) => (
     <circle cx="12" cy="12" r="3" />
   </Icon>
 );
+
+export const InfoIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5" />
+    <circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none" />
+  </Icon>
+);

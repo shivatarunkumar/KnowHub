@@ -51,7 +51,9 @@ for what each phase covers.
 `comments/{id}/reaction` · `videos/{id}/share` · `shared-with-me` · `users/search` ·
 `channels/{handle}` · `ai/enhance` + `ai/enhance/outcome` · `health`
 
-**Web routes today**: `/` · `/watch/[id]` · `/upload` · `/channel/[handle]` · `/login` · `/register`
+**Web routes today**: `/` · `/watch/[id]` · `/upload` · `/channel/[handle]` · `/about` · `/login` · `/register`
+
+`/about` is the in-app explainer: what KnowHub is, why it exists, and diagrams of the architecture, the upload path into Cloud Storage, the login flow and the engagement tables. It is written from this document and must be updated with it.
 
 **Tests**: 65 backend, 10 database, plus the frontend type check (`make test`).
 
