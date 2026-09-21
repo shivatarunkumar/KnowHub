@@ -123,14 +123,21 @@ def _openai_headers(settings: Settings) -> dict:
     return headers
 
 
+# OpenAI's reasoning models fix temperature at 1 and renamed the output-length setting.
+OPENAI_REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
+
 async def _openai_generate(settings: Settings, *, system: str, prompt: str, timeout: float) -> str:
-    payload = {
+    payload: dict = {
         "model": settings.ai_model,
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
-        "temperature": TEMPERATURE,
-        "top_p": TOP_P,
-        "max_tokens": MAX_OUTPUT_TOKENS,
     }
+    if settings.ai_model.startswith(OPENAI_REASONING_PREFIXES):
+        payload["max_completion_tokens"] = MAX_OUTPUT_TOKENS
+    else:
+        payload["temperature"] = TEMPERATURE
+        payload["top_p"] = TOP_P
+        payload["max_tokens"] = MAX_OUTPUT_TOKENS
     body = await _post(
         settings,
         f"{_versioned(settings.ai_base_url, 'v1')}/chat/completions",
@@ -168,10 +175,12 @@ async def _openai_check(settings: Settings) -> dict:
 
 # ------------------------------------------------------------------ anthropic
 async def _anthropic_generate(settings: Settings, *, system: str, prompt: str, timeout: float) -> str:
+    # No temperature: the current Claude models reject it outright ("`temperature` is
+    # deprecated for this model"), and faithfulness here comes from the prompt, not from
+    # sampling settings.
     payload = {
         "model": settings.ai_model,
         "max_tokens": MAX_OUTPUT_TOKENS,
-        "temperature": TEMPERATURE,
         "system": system,
         "messages": [{"role": "user", "content": prompt}],
     }

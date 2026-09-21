@@ -210,7 +210,8 @@ class Settings(BaseSettings):
         # A base URL naming someone else's cloud is a mix-up, not a gateway: calling
         # Anthropic's host with PROVIDER=openai can only fail.
         owner = next((p for host, p in CLOUD_HOSTS.items() if host in self.llm_api_base), "")
-        if owner and owner != self.provider:
+        # PROVIDER=none calls nothing, so a leftover base URL is not a mix-up
+        if owner and owner != self.provider and self.provider != "none":
             raise ValueError(
                 f"PROVIDER={self.provider} but LLM_API_BASE points at {owner}'s endpoint "
                 f"({self.llm_api_base}). Set PROVIDER={owner}, or leave the base empty to use "

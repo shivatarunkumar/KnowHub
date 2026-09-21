@@ -116,6 +116,11 @@ def test_a_base_url_belonging_to_another_provider_is_refused():
         settings(provider="openai", llm_api_base="https://api.anthropic.com")
 
 
+def test_switching_ai_off_ignores_a_leftover_base_url():
+    """PROVIDER=none calls nothing, so a base URL left in .env must not block startup."""
+    assert settings(provider="none", llm_api_base="https://api.anthropic.com").provider == "none"
+
+
 def test_a_cloud_provider_with_a_local_model_is_refused():
     with pytest.raises(ValueError, match="which is a local model"):
         settings(provider="openai", model="llama3.2")
@@ -206,6 +211,27 @@ async def test_anthropic_request_shape(transport):
     assert seen["json"]["model"] == "claude-sonnet-5"
     assert seen["json"]["system"] == "You edit titles."  # a field, not a message
     assert seen["json"]["max_tokens"] == ai.MAX_OUTPUT_TOKENS
+
+
+async def test_anthropic_is_not_sent_a_temperature(transport):
+    """The current Claude models refuse it: "`temperature` is deprecated for this model"."""
+    install, seen = transport
+    install(reply(ANTHROPIC_REPLY))
+    await ai.generate_text(settings(provider="anthropic", anthropic_api_key="k"), system="s", prompt="p")
+    assert "temperature" not in seen["json"]
+    assert "top_p" not in seen["json"]
+
+
+async def test_openai_reasoning_models_get_the_settings_they_accept(transport):
+    """gpt-5 and the o-series fix temperature at 1 and renamed the length setting."""
+    install, seen = transport
+    install(reply(OPENAI_REPLY))
+    await ai.generate_text(
+        settings(provider="openai", model="gpt-5", openai_api_key="k"), system="s", prompt="p"
+    )
+    assert "temperature" not in seen["json"]
+    assert seen["json"]["max_completion_tokens"] == ai.MAX_OUTPUT_TOKENS
+    assert "max_tokens" not in seen["json"]
 
 
 async def test_anthropic_joins_text_blocks_and_ignores_others(transport):
