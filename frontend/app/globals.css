@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+/* KnowHub palette: YouTube-like layout, our own colors (indigo instead of red). */
+:root {
+  --bg: #ffffff;
+  --surface: #f2f2f5;
+  --surface-hover: #e5e5eb;
+  --text: #111118;
+  --muted: #5d5e6c;
+  --border: #e2e2e8;
+  --brand: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-contrast: #ffffff;
+  --chip-active: #111118;
+  --chip-active-text: #ffffff;
+  --ok: #16a34a;
+  --warn: #d97706;
+  --bad: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0f13;
+    --surface: #1d1d24;
+    --surface-hover: #2a2a33;
+    --text: #f1f1f4;
+    --muted: #a3a3b1;
+    --border: #2a2a33;
+    --brand: #818cf8;
+    --brand-hover: #a5b4fc;
+    --brand-contrast: #0f0f13;
+    --chip-active: #f1f1f4;
+    --chip-active-text: #0f0f13;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-chip-active: var(--chip-active);
+  --color-chip-active-text: var(--chip-active-text);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Upload progress: a sheen travelling along the filled part of the bar, plus a soft
+   pulse on the card, so a long upload visibly feels alive. */
+@keyframes knowhub-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.upload-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: knowhub-sheen 1.5s ease-in-out infinite;
+}
+
+@keyframes knowhub-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.upload-pulse {
+  animation: knowhub-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes knowhub-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+}
+
+.upload-arrow {
+  animation: knowhub-rise 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upload-sheen::after,
+  .upload-pulse,
+  .upload-arrow {
+    animation: none;
+  }
+}

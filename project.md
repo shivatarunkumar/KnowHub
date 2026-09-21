@@ -1,7 +1,7 @@
 # KnowHub — Project Plan & Architecture
-_Living document. Status: Draft v0.3 · Last updated: 2026-09-19_
+_Living document. Status: v0.5 · Phases 0–3 built, Phase 5 mostly built · Last updated: 2026-09-21_
 
-> **Current target: run everything locally.** Every feature (auth, upload, playback, search, engagement, notifications, AI writing help) must work on a laptop, set up by one script (`./scripts/bootstrap.sh`, no manual steps). GCP deployment comes later and is a config switch, not a rewrite. See §3.7, §3.8 and §3.10.
+> **Current target: run everything locally.** Every feature (auth, upload, playback, search, engagement, notifications, AI writing help) must work on a laptop, set up by scripts with no manual steps: `make install` → `make db-init` → `make api` + `make web` on the host, or `./scripts/bootstrap.sh` for the full Docker stack. GCP deployment comes later and is a config switch, not a rewrite. See §1.1, §3.7, §3.8 and §3.10.
 
 ## 1. Overview
 KnowHub is an internal video and shorts platform for engineering knowledge, modeled on YouTube. Engineers upload videos and shorts that explain bug fixes, incident resolutions, how-tos and reusable work. Anyone in the company can come and search for "how did we fix X?" and watch the answer.
@@ -23,6 +23,37 @@ KnowHub is an internal video and shorts platform for engineering knowledge, mode
 > "Anonymous" still means inside the company network. See Open Questions (IAP/VPN).
 
 > ⚙️ = a recommendation that hasn't been confirmed yet. Change it if you prefer something else.
+
+### 1.1 Build status (what actually runs today)
+Everything below runs locally: `make install` → `make db-init` → `make api` + `make web`.
+See the [README](README.md) for the commands and the [roadmap](#8-implementation-roadmap)
+for what each phase covers.
+
+| Phase | State | What is in the code |
+|---|---|---|
+| **0. Foundations** | ✅ built | Monorepo, `config.py` + `.env.example` (every key in one place), adapters for storage/events/AI, docker-compose with emulators, `database/` (init_db.sql, 13 migrations, seeds, one setup script), `infra/scripts/provision.py`, Makefile, CI |
+| **1. Auth & users** ✅ built | ✅ built | `users` + `refresh_tokens`, argon2id, JWT access token + rotating refresh token in httpOnly cookies, lockout after 5 failed logins, reuse detection, register/login UI, account menu |
+| **2. Upload** | ✅ built | Resumable chunked upload straight from the browser to GCS (8 MB chunks, retries), per-user folders, metadata, optional links and code snippets, poster frame captured in the browser, `upload_events` audit, AI writing assist on title/description |
+| **2b. Video editor** | ⬜ not started | `video_edits` table exists; the trim/crop UI and the worker do not |
+| **3. Watch & home** ✅ built | ✅ built | Home feed with topic chips, watch page with range-request streaming, drawn covers when a video has no thumbnail, "Up next" sidebar, channel pages with owner controls (§2.5) |
+| **4. Search** | ⬜ not started | `search_vector` and trigram indexes are in the schema; no endpoint or UI yet |
+| **5. Engagement** 🟨 mostly built | 🟨 mostly built | Likes/dislikes, comments + one level of replies, comment likes, 60-second edit window, `@mentions`, in-app share + "shared with me" API, view counts. Missing: playlists, watch later, history UI |
+| **6. Subscriptions & notifications** | 🟨 storage only | `topic_subscriptions`, `channel_subscriptions` and `notifications` are written to (shares, replies, mentions), but there is no bell, no feed and no worker |
+| **7. Shorts** | ⬜ not started | `type='short'` is stored and badged; no vertical feed |
+| **8. Studio & analytics** | ⬜ not started | `analytics_events` table exists; no dashboard |
+| **9–11. Semantic search, GCP deploy, more AI** | ⬜ not started | `video_embeddings` (pgvector, HNSW) and the BigQuery DDL are written but unused |
+
+**API surface today** (`/api/v1`, full list at http://localhost:8000/docs):
+`auth/{register,login,refresh,logout,me}` · `topics` · `videos/feed` ·
+`videos/uploads/start` + `videos/{id}/complete` · `videos/{id}` (GET/PATCH/DELETE) ·
+`videos/{id}/stream` · `videos/{id}/thumbnail` (GET/POST) · `videos/{id}/view` ·
+`videos/{id}/reaction` · `videos/{id}/comments` · `comments/{id}` (PATCH/DELETE) ·
+`comments/{id}/reaction` · `videos/{id}/share` · `shared-with-me` · `users/search` ·
+`channels/{handle}` · `ai/enhance` + `ai/enhance/outcome` · `health`
+
+**Web routes today**: `/` · `/watch/[id]` · `/upload` · `/channel/[handle]` · `/login` · `/register`
+
+**Tests**: 65 backend, 10 database, plus the frontend type check (`make test`).
 
 ## 2. Features (YouTube parity, adapted)
 
@@ -71,8 +102,30 @@ KnowHub is an internal video and shorts platform for engineering knowledge, mode
 - Delivery: in-app only (bell). Notifications stay inside the application.
 - Subscriptions page: feed of videos from subscribed topics and channels.
 
-### 2.5 Studio (creator dashboard)
-- Lists my videos with status, views, likes and comments. Edit metadata, change thumbnail, change visibility, delete.
+### 2.5 Your channel (built)
+`/channel/{handle}` is a user's page: banner, avatar, name, @handle, video count and total views,
+then their videos. Visitors see published, non-unlisted videos in the usual grid.
+
+**The owner sees their own channel as a management list** — every upload, including the hidden
+ones and the ones still processing — with a **Manage** dialog per video:
+- **Wording**: title and description (both with the AI writing assist), topic, category.
+- **Resources**: add, change or remove the links and code snippets shown under the video.
+- **Who can watch** (one choice per video):
+  | Visibility | Who can watch | Where it appears |
+  |---|---|---|
+  | `internal` | everyone, signed in or not | home feed, search, channel |
+  | `unlisted` | anyone with the link | nowhere; link only |
+  | `restricted` | only the people on the video's list (`video_viewers`) | their feed and the link |
+  | `private` | the owner alone — effectively switched off | the owner's channel only |
+- **Comments on/off** per video. With them off nobody can post or reply; comments already
+  posted stay readable.
+- **Delete**, with a confirmation. The row is soft-deleted (`deleted_at`) so the upload audit
+  trail survives, and the file and thumbnail are removed from storage.
+
+Every change is appended to `upload_events` (`edited`, `visibility_changed`, `comments_changed`,
+`deleted`), so the audit trail covers the whole life of a video, not just its upload.
+
+### 2.5b Studio (creator analytics, later)
 - Basic analytics per video (views over time), powered by BigQuery.
 
 ### 2.6 AI features
@@ -174,23 +227,38 @@ gs://knowhub-media/                    # served via CDN
 - Later: add "Sign in with Google" (Google Workspace OIDC) that links to the same `users` row.
 
 ### 3.7 Local-first development (current target)
-The whole platform runs locally with `docker compose up`. GCP services are replaced by emulators or local equivalents behind the same interfaces, so the code paths match.
+Two ways to run it, and both are local-first:
+
+1. **Host setup (what we use day to day)** — Homebrew PostgreSQL 17 (`pg_trgm`, `pgvector`),
+   the API and the web app straight from `make api` / `make web`, files in the real GCS
+   bucket `knowhub-data` using `gcloud auth application-default login` (no service-account
+   key), and Ollama on the host for the writing assist. `scripts/localenv.sh` loads `.env`
+   and rewrites container hostnames to `localhost`, so the same `.env` works either way.
+2. **Full Docker stack** — `./scripts/bootstrap.sh` replaces every GCP service with an
+   emulator behind the same adapter interfaces, so the code paths match.
+
+The table below is the adapter matrix: each row is one config switch (§3.8).
 
 | Concern | Local (now) | GCP (later) |
 |---|---|---|
-| Postgres | `pgvector/pgvector:pg16` container | Cloud SQL Postgres 16 + pgvector |
-| Object storage | `fake-gcs-server` (buckets `knowhub-raw`, `knowhub-media` auto-created; same per-user folder layout) | GCS |
+| Postgres | Homebrew PostgreSQL 17 on 5432 (host setup), or the `pgvector/pgvector` container on 5433 (Docker) | Cloud SQL Postgres 17 + pgvector |
+| Object storage | Real GCS bucket `knowhub-data` with the `raw/` and `media/` prefixes (host setup, via ADC), or `fake-gcs-server` (Docker) | The same bucket layout |
 | Messaging | Pub/Sub emulator (`gcloud beta emulators pubsub`) | Pub/Sub |
 | Transcoding | `media-worker` runs **FFmpeg** → HLS (360p/720p) + thumbnails | Transcoder API |
 | Upload trigger | Browser calls `POST /uploads/{id}/complete` → publishes `video-uploaded` (fake-gcs has no bucket notifications) | Same call; GCS notification as backup. Worker is idempotent |
 | Video delivery | Served straight from fake-gcs URL | Cloud CDN |
 | Analytics | `analytics_events` table in Postgres | Pub/Sub → BigQuery subscription |
-| AI (LLM + embeddings) | Ollama container ⚙️ (or Vertex AI via `gcloud auth application-default login`) | Vertex AI |
-| Workers | Pull subscribers running as compose services | Cloud Run (push) |
+| AI (LLM + embeddings) | Ollama: reuses Ollama already running on the host, otherwise runs it in docker (`ollama` compose profile). `AI_PROVIDER=none` disables AI | Vertex AI |
+| Workers | Pull subscribers as compose services — **not built yet**; the API does the work inline | Cloud Run (push) |
 
 Compose services: `postgres`, `gcs`, `pubsub`, `ollama`, `api`, `media-worker`, `notify-worker`, `embed-worker`, `web`, plus a one-off `init` job. It runs the provisioning scripts from §3.10: create DB → migrate → seed → buckets → Pub/Sub topics and subscriptions → AI models.
 
-**Local "done" check:** from a fresh clone on any machine, `./scripts/bootstrap.sh` → open `http://localhost:3000` → browse as anonymous → register → upload video + short with AI-improved description → it processes and plays → like, comment, share to another user → subscriber gets a notification → search finds it.
+**Local "done" check:** from a fresh clone on any machine, set up with `make` (or
+`./scripts/bootstrap.sh`) → open `http://localhost:3000` → browse as anonymous → register →
+upload video + short with AI-improved description → it processes and plays → like, comment,
+share to another user → manage it from your channel → subscriber gets a notification →
+search finds it. Everything up to and including "manage it from your channel" works today;
+the notification bell and search are the next gaps (§1.1).
 
 ### 3.8 Configuration (single source for all GCP and app settings)
 All settings live in **one typed config module**, `backend/app/core/config.py` (pydantic-settings). It is loaded from environment variables / `.env` files, with nested groups. Nothing GCP-specific is hardcoded anywhere else. Files: `.env.example` (committed, documented) and `.env` (local, git-ignored). GCP environments get values from Secret Manager / Cloud Run env.
@@ -207,7 +275,7 @@ All settings live in **one typed config module**, `backend/app/core/config.py` (
 | pubsub | `PUBSUB_EMULATOR_HOST`, `PUBSUB_TOPIC_VIDEO_UPLOADED`, `…_TRANSCODE_EVENTS`, `…_VIDEO_PUBLISHED`, `…_VIDEO_METADATA_CHANGED`, `…_ANALYTICS_EVENTS`, subscription names | `pubsub:8085` | unset |
 | transcoder | `TRANSCODER_BACKEND` (`ffmpeg`/`gcp`), `TRANSCODER_LOCATION`, `TRANSCODER_PRESET` | `ffmpeg` | `gcp` |
 | analytics | `ANALYTICS_BACKEND` (`postgres`/`bigquery`), `BQ_DATASET`, `BQ_EVENTS_TABLE` | `postgres` | `bigquery` |
-| ai | `AI_PROVIDER` (`ollama`/`vertex`), `AI_TEXT_MODEL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIM`, `OLLAMA_BASE_URL`, `AI_ENHANCE_MAX_CHARS` | `ollama`, `llama3.1:8b`, `nomic-embed-text`, `768` ⚙️ | `vertex`, `gemini-2.5-flash`, `text-embedding-005`, `768` ⚙️ |
+| ai | `AI_PROVIDER` (`ollama`/`vertex`), `AI_TEXT_MODEL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIM`, `OLLAMA_BASE_URL`, `AI_ENHANCE_MAX_CHARS` | `ollama`, `llama3.2` (3B, ~2 GB), `nomic-embed-text`, `768` ⚙️ | `vertex`, `gemini-2.5-flash`, `text-embedding-005`, `768` ⚙️ |
 | limits | `MAX_VIDEO_BYTES`, `MAX_VIDEO_SECONDS`, `MAX_SHORT_SECONDS` | 5 GB, 7200, 60 | same |
 
 Code uses small **adapter interfaces** picked by these switches: `StorageService`, `EventBus`, `Transcoder`, `AnalyticsSink`, `TextGenerator`, `Embedder`. Moving from local to GCP only changes config.
@@ -235,15 +303,16 @@ Code uses small **adapter interfaces** picked by these switches: `StorageService
 database/
   README.md                      # how to run everything below
   postgres/
+    init_db.sql                  # FIRST script: role, database, privileges, extensions
     migrations/                  # the ONLY way the schema changes; forward-only, versioned
-      V001__extensions.sql       # pgcrypto, pg_trgm, vector
+      V001__extensions.sql       # pg_trgm + shared set_updated_at() trigger function
       V002__users_auth.sql       # users, refresh_tokens
       V003__topics.sql
       V004__videos.sql           # videos, video_topics, tags, video_tags, video_links, upload_events
       V005__video_edits.sql
       V006__engagement.sql       # reactions, comments, shares, playlists, watch_history
       V007__subscriptions_notifications.sql
-      V008__ai_embeddings.sql    # video_embeddings (+ HNSW index), ai_requests
+        V008__ai_embeddings.sql    # CREATE EXTENSION vector, video_embeddings (+ HNSW), ai_requests
       V009__analytics_local.sql  # analytics_events (local stand-in for BigQuery)
     seeds/
       common/001_topics.sql      # GCP topics list (BigQuery, Pub/Sub, GKE, …), all envs
@@ -257,7 +326,7 @@ database/
       003_views.sql              # views: daily_video_stats, trending_7d
     queries/                     # saved queries used by the app (trending, studio stats)
   scripts/
-    db_create.sh                 # create role + database if missing
+    init_db.sh                   # run init_db.sql using the values from DATABASE_URL
     migrate.py                   # apply pending migrations, record in schema_migrations (version + checksum)
     seed.py                      # run seeds/common + seeds/<APP_ENV>
     reset_local.sh               # drop + recreate + migrate + seed (refuses unless APP_ENV=local)
@@ -285,11 +354,13 @@ infra/
 ```
 Python scripts use the Google Cloud client libraries, which automatically talk to the emulators when `PUBSUB_EMULATOR_HOST` / `STORAGE_EMULATOR_HOST` are set. So the same script provisions local and GCP. BigQuery has no official emulator, so it's provisioned only on `--target gcp`; locally, analytics go to Postgres.
 
+Setup order is always: `init_db.sql` → migrations → seeds.
+
 **One command per machine**
 ```
 ./scripts/bootstrap.sh            # local: check docker → create .env from .env.example if missing
                                   #   → start postgres/gcs/pubsub/ollama → wait healthy
-                                  #   → db_create → migrate → seed → provision --target local
+                                  #   → init_db.sql → migrate → seed → provision --target local
                                   #   → pull AI models → start api, workers, web
 ./scripts/bootstrap.sh --target gcp --env dev   # same steps against a GCP project
 ```
@@ -298,7 +369,7 @@ Python scripts use the Google Cloud client libraries, which automatically talk t
 ## 4. Tech Stack
 | Layer | Choice | Why |
 |---|---|---|
-| Frontend | Next.js 15 + React + TypeScript, Tailwind CSS, TanStack Query, hls.js ⚙️ | Fast first load with SSR, rich ecosystem, easy YouTube-style layout |
+| Frontend | Next.js 16 + React 19 + TypeScript (Node 24 in containers), Tailwind CSS, TanStack Query, hls.js ⚙️ | Fast first load with SSR, rich ecosystem, easy YouTube-style layout |
 | Backend | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async) + asyncpg | Chosen by the project. Async, typed, auto OpenAPI docs |
 | Auth | pwdlib[argon2], PyJWT | Standard, secure |
 | DB | Cloud SQL PostgreSQL 16 (+ `pg_trgm`, later `pgvector`) | Chosen by the project. Full-text search built in |
@@ -324,11 +395,12 @@ All tables use `id UUID PK`, `created_at`, `updated_at`.
 | **users** | email (unique), password_hash, display_name, handle (unique, @handle), avatar_url, banner_url, bio, role (`user`/`admin`), is_active, last_login_at |
 | **refresh_tokens** | user_id → users, token_hash, expires_at, revoked_at, user_agent, ip |
 | **topics** | slug (`bigquery`), name, description, icon. Admin-managed list of GCP services / areas |
-| **videos** | owner_id → users, type (`video`/`short`), title, description, category, primary_topic_id → topics, visibility, status (`UPLOADING`/`PROCESSING`/`READY`/`FAILED`), raw_gcs_path, hls_path, thumbnail_path, duration_sec, width, height, size_bytes, view_count, like_count, comment_count, published_at, deleted_at, search_vector (tsvector, generated) |
+| **videos** | owner_id → users, type (`video`/`short`), title, description, category, primary_topic_id → topics, visibility (`internal`/`unlisted`/`restricted`/`private`), comments_enabled, status (`UPLOADING`/`PROCESSING`/`READY`/`FAILED`), raw_gcs_path, hls_path, thumbnail_path, duration_sec, width, height, size_bytes, view_count, like_count, comment_count, published_at, deleted_at, search_vector (tsvector, generated) |
+| **video_viewers** | video_id, user_id, added_by, created_at. The allow-list behind visibility `restricted` |
 | **video_topics** | video_id, topic_id (additional topics, many-to-many) |
 | **tags / video_tags** | free-form tags |
 | **video_links** | video_id, kind (`incident`/`jira`/`repo`/`pr`/`doc`), url, label |
-| **upload_events** | video_id, user_id, event (`initiated`/`uploaded`/`processing`/`ready`/`failed`/`published`/`deleted`), metadata JSONB, created_at. **The audit trail of who uploaded what and when** |
+| **upload_events** | video_id, user_id, event (`initiated`/`uploaded`/`processing`/`ready`/`failed`/`published`/`edited`/`visibility_changed`/`comments_changed`/`deleted`), metadata JSONB, created_at. **The audit trail of who uploaded what and when** |
 | **video_reactions** | user_id, video_id, value (+1 like / -1 dislike), PK(user_id, video_id) |
 | **comments** | video_id, user_id, parent_id (nullable, for replies), body, like_count, is_pinned, edited_at, deleted_at |
 | **comment_reactions** | user_id, comment_id |
@@ -351,12 +423,12 @@ All of the above is defined as SQL migrations in `database/postgres/migrations/`
 🔓 = public, 🔒 = login required
 
 - **Auth**: `POST /auth/register` 🔓 · `POST /auth/login` 🔓 · `POST /auth/refresh` 🔓 · `POST /auth/logout` 🔒 · `GET /auth/me` 🔒
-- **Users/Channels**: `GET /channels/{handle}` 🔓 · `GET /channels/{handle}/videos?type=` 🔓 · `PATCH /users/me` 🔒
+- **Users/Channels**: `GET /channels/{handle}` 🔓 (profile + videos; the owner also gets hidden/processing ones and each video's viewer list) · `PATCH /users/me` 🔒
 - **Uploads**: `POST /uploads` 🔒 (returns video_id + signed URL) · `POST /uploads/{id}/complete` 🔒 · `POST /videos/{id}/thumbnail-upload-url` 🔒
 - **Video editing**: `GET /videos/{id}/edits` 🔒 owner · `PUT /videos/{id}/edits` 🔒 owner (save draft edit list) · `POST /videos/{id}/edits/apply` 🔒 owner (process it)
 - **AI**: `POST /ai/enhance` 🔒 (improve title/description, suggest tags)
 - **Sharing**: `POST /videos/{id}/share` 🔒 (to user ids) · `GET /shared-with-me` 🔒 · `GET /users/search?q=` 🔒 (pick recipients)
-- **Videos**: `GET /videos/feed?type=&topic=&cursor=` 🔓 · `GET /videos/trending` 🔓 · `GET /videos/{id}` 🔓 · `GET /videos/{id}/related` 🔓 · `PATCH /videos/{id}` 🔒 owner · `POST /videos/{id}/publish` 🔒 owner · `DELETE /videos/{id}` 🔒 owner
+- **Videos**: `GET /videos/feed?type=&topic=&cursor=` 🔓 · `GET /videos/trending` 🔓 · `GET /videos/{id}` 🔓 · `GET /videos/{id}/related` 🔓 · `PATCH /videos/{id}` 🔒 owner (wording, topic, category, visibility, `comments_enabled`, `viewer_ids`, links, snippets) · `DELETE /videos/{id}` 🔒 owner (soft delete + removes the files)
 - **Shorts**: `GET /shorts/feed?cursor=` 🔓
 - **Search**: `GET /search?q=&type=&topic=&category=&date=&duration=&sort=` 🔓 · `GET /search/suggest?q=` 🔓 · _future:_ `&mode=semantic|hybrid`
 - **Engagement**: `POST /videos/{id}/view` 🔓 · `PUT /videos/{id}/reaction` 🔒 · `GET /videos/{id}/comments?sort=&cursor=` 🔓 · `POST /videos/{id}/comments` 🔒 · `PATCH/DELETE /comments/{id}` 🔒 · `PUT /comments/{id}/reaction` 🔒
@@ -372,9 +444,13 @@ Pagination is cursor-based. Errors use RFC 7807 problem JSON.
 ```
 KnowHub/
   project.md                 # this doc
-  frontend/                  # Next.js app
-    app/ (routes: /, /watch/[id], /shorts/[id], /results, /@[handle], /upload, /studio, /feed/subscriptions)
-    components/ (Sidebar, TopBar, VideoCard, Player, ShortsViewer, Comments, UploadDialog…)
+  frontend/                  # Next.js app (App Router, Tailwind v4)
+    app/   built:   /, /watch/[id], /upload, /channel/[handle], /login, /register
+           planned: /shorts/[id], /results, /studio, /feed/subscriptions
+    components/ (AppShell, Sidebar, TopBar, VideoCard, VideoThumbnail, VideoPlayer,
+                 UploadForm, Comments, AiAssist, ShareDialog, ChannelVideos,
+                 VideoManageDialog…)
+    lib/ (api.ts, session.ts, upload.ts, thumbnail.ts)
   backend/
     app/
       main.py
@@ -383,15 +459,16 @@ KnowHub/
       ai/prompts/    # versioned prompt files for writing assist
       models/        # SQLAlchemy
       schemas/       # Pydantic
-      api/v1/        # routers: auth, videos, uploads, search, comments, subscriptions, notifications, playlists, studio, internal
-      services/      # business logic
-      workers/       # media_worker.py, notify_worker.py, embed_worker.py
+      api/v1/        # built: health, auth, topics, videos, channels, engagement, ai
+                     # planned: search, subscriptions, notifications, playlists, studio, internal
+      services/      # business logic (auth, video, engagement, ai_assist, health)
+      workers/       # planned: media_worker.py, notify_worker.py, embed_worker.py
       scripts/       # reembed.py (app-level jobs only)
     tests/
   database/                  # ALL database work: Postgres migrations/DDL, seeds, BigQuery DDL + queries, DB scripts (§3.10)
   infra/                     # provisioning scripts: GCS, Pub/Sub, BigQuery, GCP project setup, AI models (§3.10)
   scripts/bootstrap.sh       # one command: new machine → running app
-  Makefile                   # bootstrap, migrate, seed, reset-local, provision, up, down, test
+  Makefile                   # install, db-init, db-reset, db-status, api, web, test, lint, docker targets
   docker-compose.yml         # postgres(pgvector), fake-gcs, pubsub-emulator, ollama, init, api, workers, web
   .env.example               # every config key, documented
   .github/workflows/
@@ -400,11 +477,11 @@ KnowHub/
 ## 8. Implementation Roadmap
 | Phase | Scope | Outcome |
 |---|---|---|
-| **0. Foundations** | Monorepo scaffold, `config.py` + `.env.example`, adapter interfaces, docker-compose with all emulators (Postgres+pgvector, fake-gcs, Pub/Sub, Ollama), `database/` (migration runner, first migrations, seeds), `infra/scripts/provision.py` (buckets, topics, subscriptions), `scripts/bootstrap.sh` + Makefile, FastAPI + Next.js skeletons, CI lint/test | Fresh machine → `./scripts/bootstrap.sh` → everything running, zero manual steps |
+| **0. Foundations** ✅ built | Monorepo scaffold, `config.py` + `.env.example`, adapter interfaces, docker-compose with all emulators (Postgres+pgvector, fake-gcs, Pub/Sub, Ollama), `database/` (migration runner, first migrations, seeds), `infra/scripts/provision.py` (buckets, topics, subscriptions), `scripts/bootstrap.sh` + Makefile, FastAPI + Next.js skeletons, CI lint/test | Fresh machine → `./scripts/bootstrap.sh` → everything running, zero manual steps |
 | **1. Auth & users** | users/refresh_tokens tables, register/login/refresh/logout/me, login UI, protected routes | Users can sign up and log in |
-| **2. Upload pipeline + AI assist** | Signed-URL upload, per-user GCS folders, upload dialog with metadata, **"Improve with AI" for title/description/tags**, upload_events audit, media-worker (FFmpeg locally), **embed-worker storing title+description embeddings** | Upload → processed HLS, AI-polished metadata, embeddings stored |
+| **2. Upload pipeline + AI assist** ✅ built (no transcoding yet) | Signed-URL upload, per-user GCS folders, upload dialog with metadata, **"Improve with AI" for title/description/tags**, upload_events audit, media-worker (FFmpeg locally), **embed-worker storing title+description embeddings** | Upload → processed HLS, AI-polished metadata, embeddings stored |
 | **2b. Video editor** | In-browser editor: timeline to keep wanted time range(s) (trim/cut), crop box, thumbnail frame with local preview during upload; `video_edits` table; worker applies edit list (FFmpeg / Transcoder `editList`); re-edit after upload with versioned output | Users edit while uploading |
-| **3. Watch & home** | Home feed, watch page with HLS player, channel page, view counts, YouTube-style layout (top bar, sidebar, chips) | Anonymous users can browse and watch |
+| **3. Watch & home** | Home feed, watch page with HLS player, channel page **(built: §2.5)**, view counts, YouTube-style layout (top bar, sidebar, chips) | Anonymous users can browse and watch |
 | **4. Search** | Postgres FTS + trigram, filters, suggestions, results page | Users can find resolutions |
 | **5. Engagement** | Likes/dislikes, comments and replies, in-app share to users + copy link/timestamp, Watch Later, playlists, history | YouTube-like interaction |
 | **6. Subscriptions & notifications** | Topic and channel subscriptions, video-published Pub/Sub, notify-worker, bell UI, subscriptions feed | "New BigQuery resolution uploaded" alerts |
@@ -444,3 +521,10 @@ KnowHub/
 | 16 | Editor UI: build our own timeline (HTML5 video + canvas), or use a library? Blur and captions editing in v1 or later? | Proposed: own lightweight timeline; blur/captions later ⚙️ |
 | 17 | Where does DB work live / how are environments set up? | **Decided:** all DB work (DDL/migrations, seeds, BigQuery DDL + queries, scripts) in `database/`. GCS/Pub/Sub/BigQuery/GCP setup by idempotent scripts in `infra/`. One `bootstrap.sh` per machine, no manual steps |
 | 18 | Migration tool: plain SQL + own runner, or an off-the-shelf tool (Flyway/dbmate)? Terraform later for GCP? | Proposed: plain SQL + `migrate.py`; scripts instead of Terraform for now ⚙️ |
+| 19 | Upload transport for big files (10 MB failures through the Next.js proxy) | **Decided:** the browser uploads straight to GCS with a resumable session in 8 MB chunks; the API only hands out the session URL |
+| 20 | Thumbnails without an FFmpeg dependency | **Decided:** capture the poster frame in the browser (`<video>` → `<canvas>` → JPEG) and upload it on publish; videos without one get a drawn cover |
+| 21 | Per-video privacy: what does "limit it to a few people" mean? | **Decided:** a fourth visibility, `restricted`, with an allow-list in `video_viewers`. `unlisted` stays link-only, `private` is owner-only (§2.5) |
+| 22 | Can an uploader turn comments off? | **Decided:** yes, per video (`videos.comments_enabled`). Comments already posted stay readable |
+| 23 | Deleting a video | **Decided:** soft delete (`deleted_at`) so the audit trail survives; the file and thumbnail are removed from storage |
+| 24 | Comment editing window | **Decided:** 60 s (`COMMENT_EDIT_WINDOW_SECONDS`), no countdown shown |
+| 25 | Where do creator controls live: a separate Studio, or the channel page? | **Decided:** the channel page is the management surface (§2.5). Studio stays for analytics later |

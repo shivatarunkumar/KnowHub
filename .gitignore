@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# KnowHub
+.env.tmp
+node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+*.tsbuildinfo
+.venv/
+.env.gcp
