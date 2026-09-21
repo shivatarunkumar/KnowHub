@@ -150,7 +150,14 @@ async def enhance(
     session.add(record)
     await session.commit()
 
-    result = {"field": field, "suggestion": suggestion, "request_id": str(record.id)}
+    result = {
+        "field": field,
+        "suggestion": suggestion,
+        "request_id": str(record.id),
+        # shown in the suggestion box, so the author knows what wrote it
+        "provider": settings.provider,
+        "model": settings.ai_model,
+    }
     if field == "tags":
         result["items"] = parse_tags(suggestion)
     return result

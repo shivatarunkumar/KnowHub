@@ -34,6 +34,9 @@ class EnhanceOut(BaseModel):
     field: str
     suggestion: str
     request_id: str
+    # which model actually wrote this, so the box can say so
+    provider: str
+    model: str
     items: list[str] | None = None
 
 

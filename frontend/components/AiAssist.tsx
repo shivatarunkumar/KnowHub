@@ -7,6 +7,15 @@ type Field = "title" | "description" | "comment";
 
 type Context = { title?: string; topic?: string; category?: string; type?: string };
 
+/** What wrote the suggestion, as the provider would spell it. */
+const PROVIDER_LABELS: Record<string, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  gemini: "Gemini",
+  vertex: "Vertex AI",
+  ollama: "Ollama",
+};
+
 /**
  * Icon-only "improve with AI" button with the suggestion in a dropdown beneath it.
  * The suggestion never touches the field until the author picks "Use this".
@@ -33,6 +42,7 @@ export function AiAssist({
   const [open, setOpen] = useState(false);
   const [suggestion, setSuggestion] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [source, setSource] = useState<{ provider: string; model: string } | null>(null);
   const [error, setError] = useState("");
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +66,7 @@ export function AiAssist({
     setOpen(true);
     setError("");
     setSuggestion("");
+    setSource(null);
     if (value.trim().length < 3) {
       setError(`Write a few words in the ${field} first, then I'll tidy them up.`);
       return;
@@ -74,6 +85,7 @@ export function AiAssist({
       }
       setSuggestion(body.suggestion);
       setRequestId(body.request_id);
+      setSource({ provider: body.provider, model: body.model });
     } catch {
       setError("The AI assistant isn't available right now.");
     } finally {
@@ -122,6 +134,15 @@ export function AiAssist({
             <span className="text-xs font-semibold uppercase tracking-wide text-muted">
               AI suggestion
             </span>
+            {source && (
+              <span
+                // the model is the useful detail; the provider alone would not say which
+                title={`Written by ${PROVIDER_LABELS[source.provider] ?? source.provider} · ${source.model}`}
+                className="min-w-0 truncate rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-muted"
+              >
+                {PROVIDER_LABELS[source.provider] ?? source.provider} · {source.model}
+              </span>
+            )}
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -147,7 +168,9 @@ export function AiAssist({
                   {suggestion}
                 </p>
                 <p className="mt-3 text-xs text-muted">
-                  Rewritten from your own words. Check it before using.
+                  Rewritten from your own words by{" "}
+                  {source ? `${PROVIDER_LABELS[source.provider] ?? source.provider} (${source.model})` : "AI"}.
+                  Check it before using.
                 </p>
               </>
             )}
