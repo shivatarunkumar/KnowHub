@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Topic } from "@/lib/api";
-import { CloseIcon, SearchIcon, TopicIcon } from "./icons";
+import { CloseIcon, SearchIcon } from "./icons";
 
 const PANEL_WIDTH = 300;
 const GUTTER = 12;
@@ -104,11 +104,10 @@ export function TopicFilter({
         }}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`flex h-9 items-center gap-2 whitespace-nowrap rounded-lg pl-2.5 pr-2 text-sm font-medium ${
+        className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg pl-3 pr-2 text-sm font-medium ${
           selected.length ? "bg-chip-active text-chip-active-text" : "bg-surface hover:bg-surface-hover"
         }`}
       >
-        <TopicIcon width={16} height={16} className={selected.length ? "" : "text-muted"} />
         {label}
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="m6 9 6 6 6-6" />
