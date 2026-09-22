@@ -65,4 +65,5 @@ class UserOut(BaseModel):
     avatar_url: str | None
     bio: str | None
     role: str
+    team_id: uuid.UUID | None = None
     created_at: datetime

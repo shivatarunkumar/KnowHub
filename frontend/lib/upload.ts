@@ -13,6 +13,7 @@ export type UploadMetadata = {
   type: string;
   category: string;
   topic_slug: string;
+  team_slug: string;
   visibility: string;
   duration_sec?: number | null;
   width?: number | null;

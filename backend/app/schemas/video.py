@@ -62,6 +62,8 @@ class VideoOut(BaseModel):
     owner_handle: str | None = None
     topic_slug: str | None = None
     topic_name: str | None = None
+    team_slug: str | None = None
+    team_name: str | None = None
     has_thumbnail: bool = False
     comments_enabled: bool = True
     links: list[LinkOut] = []
@@ -81,6 +83,7 @@ class VideoUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=20000)
     category: str | None = None
     topic_slug: str | None = None
+    team_slug: str | None = None
     visibility: str | None = None
     comments_enabled: bool | None = None
     # only meaningful with visibility="restricted"; replaces the whole list

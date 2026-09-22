@@ -9,6 +9,7 @@ export type SessionUser = {
   avatar_url: string | null;
   bio: string | null;
   role: "user" | "admin";
+  team_id: string | null;
 };
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? "http://localhost:8000";

@@ -2,14 +2,15 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChannelVideos } from "@/components/ChannelVideos";
-import { formatViews, getChannel, getTopics } from "@/lib/api";
+import { formatViews, getChannel, getTeams, getTopics } from "@/lib/api";
 
 export default async function ChannelPage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
   const cookieHeader = (await cookies()).toString();
-  const [channel, topics] = await Promise.all([
+  const [channel, topics, teams] = await Promise.all([
     getChannel(decodeURIComponent(handle), cookieHeader),
     getTopics(),
+    getTeams(),
   ]);
   if (!channel) notFound();
 
@@ -58,7 +59,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ handle
         </p>
       )}
 
-      <ChannelVideos videos={channel.videos} topics={topics} isMe={channel.is_me} />
+      <ChannelVideos videos={channel.videos} topics={topics} teams={teams} isMe={channel.is_me} />
     </div>
   );
 }

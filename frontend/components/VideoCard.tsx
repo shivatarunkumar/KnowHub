@@ -35,6 +35,9 @@ export function VideoCard({ video }: { video: Video }) {
           </p>
           <p className="mt-1 flex flex-wrap gap-1.5 text-xs text-muted">
             {video.topic_name && <span className="rounded bg-surface px-1.5 py-0.5">{video.topic_name}</span>}
+            {video.team_name && (
+              <span className="rounded bg-surface px-1.5 py-0.5">{video.team_name}</span>
+            )}
             <span className="rounded bg-surface px-1.5 py-0.5">
               {CATEGORY_LABELS[video.category] ?? video.category}
             </span>

@@ -161,11 +161,39 @@ def check_schema(report: Report, conn: psycopg.Connection) -> None:
     else:
         report.ok("migrations", f"{applied} applied, latest V{latest:03d} of {len(on_disk)} files")
 
-    topics = scalar(conn, "SELECT count(*) FROM topics") or 0
-    if topics:
-        report.ok("seed data", f"{topics} topics")
+    # Tables the app cannot work without. Add to this list when a migration adds one.
+    required = (
+        "users",
+        "refresh_tokens",
+        "password_reset_tokens",
+        "topics",
+        "teams",
+        "videos",
+        "video_links",
+        "video_snippets",
+        "video_viewers",
+        "upload_events",
+        "video_reactions",
+        "comments",
+        "comment_reactions",
+        "video_shares",
+        "notifications",
+    )
+    with conn.cursor() as cur:
+        cur.execute("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+        present = {row[0] for row in cur.fetchall()}
+    if absent := [name for name in required if name not in present]:
+        report.fail("core tables", f"missing: {', '.join(absent)}", "run: make db-init")
     else:
-        report.warn("seed data", "no topics", "run: make db-init (the feed's topic chips need them)")
+        report.ok("core tables", f"all {len(required)} present")
+
+    # Seeded lists the UI needs: without them the filters and the upload form are empty.
+    for table, what in (("topics", "the topic filter"), ("teams", "the team filter")):
+        count = scalar(conn, f"SELECT count(*) FROM {table}") or 0
+        if count:
+            report.ok(f"seed: {table}", f"{count} rows")
+        else:
+            report.warn(f"seed: {table}", f"no {table}", f"run: make db-init ({what} needs them)")
 
 
 def main() -> int:

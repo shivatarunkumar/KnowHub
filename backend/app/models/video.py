@@ -30,6 +30,7 @@ class Video(UUIDPrimaryKey, Timestamps, Base):
     description: Mapped[str | None]
     category: Mapped[str]
     primary_topic_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("topics.id"))
+    team_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("teams.id"))
     visibility: Mapped[str] = mapped_column(default="internal")
     status: Mapped[str] = mapped_column(default="UPLOADING")
     environment: Mapped[str | None]

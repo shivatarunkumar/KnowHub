@@ -27,6 +27,8 @@ class User(UUIDPrimaryKey, Timestamps, Base):
     locked_until: Mapped[datetime | None]
     deleted_at: Mapped[datetime | None]
     subscriber_count: Mapped[int] = mapped_column(default=0)
+    # the team this person works in; the upload form defaults to it
+    team_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("teams.id"))
 
 
 class RefreshToken(UUIDPrimaryKey, Base):

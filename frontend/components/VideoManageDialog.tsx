@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CATEGORY_LABELS, type Person, type Topic, type Video } from "@/lib/api";
+import { CATEGORY_LABELS, type Person, type Team, type Topic, type Video } from "@/lib/api";
 import { AiAssist } from "./AiAssist";
 import { type LinkDraft, ResourceFields, type SnippetDraft } from "./ResourceFields";
 import { CloseIcon, GlobeIcon, LinkIcon, LockIcon, PeopleIcon, SpinnerIcon, TrashIcon } from "./icons";
@@ -40,12 +40,14 @@ const VISIBILITIES = [
 export function VideoManageDialog({
   video,
   topics,
+  teams,
   onSaved,
   onDeleted,
   onClose,
 }: {
   video: Video;
   topics: Topic[];
+  teams: Team[];
   onSaved: (video: Video) => void;
   onDeleted: (id: string) => void;
   onClose: () => void;
@@ -54,6 +56,7 @@ export function VideoManageDialog({
   const [description, setDescription] = useState(video.description ?? "");
   const [category, setCategory] = useState(video.category);
   const [topicSlug, setTopicSlug] = useState(video.topic_slug ?? "");
+  const [teamSlug, setTeamSlug] = useState(video.team_slug ?? "");
   const [visibility, setVisibility] = useState(video.visibility);
   const [commentsEnabled, setCommentsEnabled] = useState(video.comments_enabled);
   const [people, setPeople] = useState<Person[]>(video.allowed_viewers ?? []);
@@ -131,6 +134,7 @@ export function VideoManageDialog({
         description: description.trim(),
         category,
         topic_slug: topicSlug,
+        team_slug: teamSlug,
         visibility,
         comments_enabled: commentsEnabled,
         links: links
@@ -262,6 +266,24 @@ export function VideoManageDialog({
                 {topics.map((topic) => (
                   <option key={topic.slug} value={topic.slug}>
                     {topic.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="manage-team" className="text-sm font-medium">
+                Team
+              </label>
+              <select
+                id="manage-team"
+                value={teamSlug}
+                onChange={(e) => setTeamSlug(e.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-line bg-bg px-2 text-sm outline-none focus:border-brand"
+              >
+                <option value="">No team</option>
+                {teams.map((team) => (
+                  <option key={team.slug} value={team.slug}>
+                    {team.name}
                   </option>
                 ))}
               </select>

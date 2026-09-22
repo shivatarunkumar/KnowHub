@@ -45,6 +45,7 @@ class UploadStart(BaseModel):
     type: str = "video"
     category: str
     topic_slug: str = ""
+    team_slug: str = ""
     visibility: str = "internal"
     # measured in the browser before upload
     duration_sec: int | None = Field(default=None, ge=0)
@@ -82,6 +83,7 @@ async def start_upload(
     try:
         video_service.validate_metadata(data.type, data.category, data.visibility)
         topic = await video_service.topic_by_slug(session, data.topic_slug or None)
+        team = await video_service.team_by_slug(session, data.team_slug or None)
     except video_service.VideoError as exc:
         raise _fail(exc) from exc
 
@@ -105,6 +107,7 @@ async def start_upload(
         description=data.description.strip() or None,
         category=data.category,
         primary_topic_id=topic.id if topic else None,
+        team_id=team.id if team else None,
         visibility=data.visibility,
         status="UPLOADING",
         original_filename=data.filename,
@@ -128,6 +131,9 @@ async def start_upload(
         ) from exc
 
     video.raw_gcs_path = object_name
+    if team is not None and user.team_id is None:
+        # first upload tells us which team this person is in; the form defaults to it next time
+        user.team_id = team.id
     await video_service.save_resources(session, video, data.links, data.snippets)
     video_service.record_event(
         session,
@@ -187,6 +193,7 @@ async def upload_video(
     description: Annotated[str, Form(max_length=20000)] = "",
     video_type: Annotated[str, Form(alias="type")] = "video",
     topic_slug: Annotated[str, Form()] = "",
+    team_slug: Annotated[str, Form()] = "",
     visibility: Annotated[str, Form()] = "internal",
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
@@ -198,6 +205,7 @@ async def upload_video(
     try:
         video_service.validate_metadata(video_type, category, visibility)
         topic = await video_service.topic_by_slug(session, topic_slug or None)
+        team = await video_service.team_by_slug(session, team_slug or None)
     except video_service.VideoError as exc:
         raise _fail(exc) from exc
 
@@ -215,6 +223,7 @@ async def upload_video(
         description=description.strip() or None,
         category=category,
         primary_topic_id=topic.id if topic else None,
+        team_id=team.id if team else None,
         visibility=visibility,
         status="UPLOADING",
         original_filename=file.filename,
@@ -262,6 +271,8 @@ async def upload_video(
             "owner_handle": user.handle,
             "topic_slug": topic.slug if topic else None,
             "topic_name": topic.name if topic else None,
+            "team_slug": team.slug if team else None,
+            "team_name": team.name if team else None,
         }
     )
 
@@ -373,13 +384,19 @@ async def delete_video(
 async def feed(
     video_type: str | None = Query(default=None, alias="type"),
     topic: str | None = None,
+    team: str | None = None,
     limit: int = 24,
     user: User | None = Depends(current_user_optional),
     session: AsyncSession = Depends(get_session),
 ) -> VideoPage:
-    """Newest videos, optionally filtered by type or topic. Open to anyone."""
+    """Newest videos, optionally filtered by type, topic or team. Open to anyone."""
     items = await video_service.list_feed(
-        session, video_type=video_type, topic_slug=topic, viewer=user, limit=min(limit, 100)
+        session,
+        video_type=video_type,
+        topic_slug=topic,
+        team_slug=team,
+        viewer=user,
+        limit=min(limit, 100),
     )
     return VideoPage(items=[VideoOut.model_validate(item) for item in items])
 

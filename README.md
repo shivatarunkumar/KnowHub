@@ -17,7 +17,7 @@ file is the single source of truth. This README is only about running the thing.
 | Area | What you can do |
 |---|---|
 | **Accounts** | Register, sign in, stay signed in (argon2id passwords, JWT access token + rotating refresh token in httpOnly cookies) |
-| **Watch** | Browse the home feed, filter by topic, watch with seeking (HTTP range requests), see views, likes and comments — all without signing in |
+| **Watch** | Browse the home feed, filter by topic or team, watch with seeking (HTTP range requests), see views, likes and comments — all without signing in |
 | **Upload** | Drag and drop, fill in the details while the file uploads straight to storage in 8 MB chunks (so size is not limited by the API), pick the poster frame, publish |
 | **Write with AI** | "Improve with AI" on the title, the description and comments — a local Ollama model rewrites your own words and never invents facts |
 | **Resources** | Attach Confluence/repo/PR/ticket links and copy-ready code snippets, so viewers don't retype what's on screen |

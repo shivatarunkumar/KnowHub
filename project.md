@@ -44,7 +44,7 @@ for what each phase covers.
 | **9–11. Semantic search, GCP deploy, more AI** | ⬜ not started | `video_embeddings` (pgvector, HNSW) and the BigQuery DDL are written but unused |
 
 **API surface today** (`/api/v1`, full list at http://localhost:8000/docs):
-`auth/{register,login,refresh,logout,me,forgot-password,reset-password}` · `topics` · `videos/feed` ·
+`auth/{register,login,refresh,logout,me,forgot-password,reset-password}` · `topics` · `teams` · `videos/feed` ·
 `videos/uploads/start` + `videos/{id}/complete` · `videos/{id}` (GET/PATCH/DELETE) ·
 `videos/{id}/stream` · `videos/{id}/thumbnail` (GET/POST) · `videos/{id}/view` ·
 `videos/{id}/reaction` · `videos/{id}/comments` · `comments/{id}` (PATCH/DELETE) ·
@@ -66,7 +66,9 @@ runtime but can only say "timed out"; these say why.
 
 ### 2.1 Viewing
 - **Home feed**: grid of video cards (thumbnail, duration, title, uploader, views, age). New and anonymous visitors see *Latest + Trending*. Logged-in users also see *From your subscriptions* and *Recommended for your topics*.
-- **Topic chips bar** across the top of home (All, BigQuery, Pub/Sub, GKE, Cloud SQL, …).
+- **Topic chips bar** across the top of home (All, BigQuery, Pub/Sub, GKE, Cloud SQL, …), and a
+  **team filter** beside it (All teams by default, grouped by division). Topics say what a video
+  is about, teams say who it came from, and the two combine.
 - **Watch page**: adaptive HLS player (quality selector, speed, captions later, theater/fullscreen, keyboard shortcuts, resume position). Below the player: title, view count, like/dislike, share, save, subscribe, description with links (incident, Jira, repo, PR), and comments. Sidebar: "Up next" related videos.
 - **Shorts**: vertical 9:16 full-height feed with swipe/scroll and autoplay loop. Like, comment and share buttons on the right. A Shorts shelf on home.
 - **Channel page** (each user is a channel): banner, avatar, subscriber count, Videos / Shorts / Playlists tabs.
@@ -438,11 +440,12 @@ All tables use `id UUID PK`, `created_at`, `updated_at`.
 
 | Table | Key columns |
 |---|---|
-| **users** | email (unique), password_hash, display_name, handle (unique, @handle), avatar_url, banner_url, bio, role (`user`/`admin`), is_active, last_login_at |
+| **users** | email (unique), password_hash, display_name, handle (unique, @handle), avatar_url, banner_url, bio, role (`user`/`admin`), team_id → teams, is_active, last_login_at |
 | **refresh_tokens** | user_id → users, token_hash, expires_at, revoked_at, revoked_reason (`rotated`/`logout`/`reuse_detected`/`password_reset`/`admin`), user_agent, ip |
 | **password_reset_tokens** | user_id → users, token_hash (SHA-256), expires_at, used_at, requested_ip, user_agent. Single use, 30 min (`PASSWORD_RESET_TTL_MIN`) |
 | **topics** | slug (`bigquery`), name, description, icon. Admin-managed list of GCP services / areas |
-| **videos** | owner_id → users, type (`video`/`short`), title, description, category, primary_topic_id → topics, visibility (`internal`/`unlisted`/`restricted`/`private`), comments_enabled, status (`UPLOADING`/`PROCESSING`/`READY`/`FAILED`), raw_gcs_path, hls_path, thumbnail_path, duration_sec, width, height, size_bytes, view_count, like_count, comment_count, published_at, deleted_at, search_vector (tsvector, generated) |
+| **teams** | slug (`payments`), name, description, division, sort_order, is_active. Which part of the organisation a video comes from |
+| **videos** | owner_id → users, type (`video`/`short`), title, description, category, primary_topic_id → topics, team_id → teams, visibility (`internal`/`unlisted`/`restricted`/`private`), comments_enabled, status (`UPLOADING`/`PROCESSING`/`READY`/`FAILED`), raw_gcs_path, hls_path, thumbnail_path, duration_sec, width, height, size_bytes, view_count, like_count, comment_count, published_at, deleted_at, search_vector (tsvector, generated) |
 | **video_viewers** | video_id, user_id, added_by, created_at. The allow-list behind visibility `restricted` |
 | **video_topics** | video_id, topic_id (additional topics, many-to-many) |
 | **tags / video_tags** | free-form tags |
@@ -479,7 +482,7 @@ All of the above is defined as SQL migrations in `database/postgres/migrations/`
 - **Shorts**: `GET /shorts/feed?cursor=` 🔓
 - **Search**: `GET /search?q=&type=&topic=&category=&date=&duration=&sort=` 🔓 · `GET /search/suggest?q=` 🔓 · _future:_ `&mode=semantic|hybrid`
 - **Engagement**: `POST /videos/{id}/view` 🔓 · `PUT /videos/{id}/reaction` 🔒 · `GET /videos/{id}/comments?sort=&cursor=` 🔓 · `POST /videos/{id}/comments` 🔒 · `PATCH/DELETE /comments/{id}` 🔒 · `PUT /comments/{id}/reaction` 🔒
-- **Subscriptions**: `GET /topics` 🔓 · `PUT/DELETE /topics/{slug}/subscription` 🔒 · `PUT/DELETE /channels/{handle}/subscription` 🔒 · `GET /subscriptions/feed` 🔒
+- **Subscriptions**: `GET /topics` 🔓 · `GET /teams` 🔓 · `PUT/DELETE /topics/{slug}/subscription` 🔒 · `PUT/DELETE /channels/{handle}/subscription` 🔒 · `GET /subscriptions/feed` 🔒
 - **Notifications**: `GET /notifications` 🔒 · `GET /notifications/unread-count` 🔒 · `POST /notifications/{id}/read` 🔒 · `POST /notifications/read-all` 🔒
 - **Library**: `GET/POST /playlists` 🔒 · `POST/DELETE /playlists/{id}/items` 🔒 · `GET /history` 🔒 · `DELETE /history` 🔒
 - **Studio**: `GET /studio/videos` 🔒 · `GET /studio/videos/{id}/analytics` 🔒

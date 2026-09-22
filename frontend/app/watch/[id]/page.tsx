@@ -73,6 +73,14 @@ export default async function WatchPage({ params }: { params: Promise<{ id: stri
                 {video.topic_name}
               </Link>
             )}
+            {video.team_slug && (
+              <Link
+                href={`/?team=${video.team_slug}`}
+                className="rounded-full bg-bg px-2.5 py-0.5 text-xs font-medium hover:bg-surface-hover"
+              >
+                {video.team_name}
+              </Link>
+            )}
             <span className="rounded-full bg-bg px-2.5 py-0.5 text-xs">
               {CATEGORY_LABELS[video.category] ?? video.category}
             </span>

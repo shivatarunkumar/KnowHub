@@ -20,6 +20,23 @@ export const getTopics = cache(async (): Promise<Topic[]> => {
   }
 });
 
+export type Team = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  division: string | null;
+};
+
+export const getTeams = cache(async (): Promise<Team[]> => {
+  try {
+    const res = await fetch(`${API_INTERNAL_URL}/api/v1/teams`, { cache: "no-store" });
+    return res.ok ? await res.json() : [];
+  } catch {
+    return []; // API down: the filter just doesn't appear
+  }
+});
+
 export type Video = {
   id: string;
   type: "video" | "short";
@@ -40,6 +57,8 @@ export type Video = {
   owner_handle: string | null;
   topic_slug: string | null;
   topic_name: string | null;
+  team_slug: string | null;
+  team_name: string | null;
   has_thumbnail: boolean;
   comments_enabled: boolean;
   allowed_viewers?: Person[];
@@ -90,9 +109,12 @@ export const CATEGORY_LABELS: Record<string, string> = {
   reusable_component: "Reusable component",
 };
 
-export async function getFeed(params: { topic?: string; type?: string } = {}): Promise<Video[]> {
+export async function getFeed(
+  params: { topic?: string; team?: string; type?: string } = {},
+): Promise<Video[]> {
   const query = new URLSearchParams();
   if (params.topic) query.set("topic", params.topic);
+  if (params.team) query.set("team", params.team);
   if (params.type) query.set("type", params.type);
   try {
     const res = await fetch(`${API_INTERNAL_URL}/api/v1/videos/feed?${query}`, { cache: "no-store" });

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { type DragEvent, type FormEvent, useRef, useState } from "react";
-import { CATEGORY_LABELS, type Topic } from "@/lib/api";
+import { CATEGORY_LABELS, type Team, type Topic } from "@/lib/api";
 import { captureFrame, probeVideo, uploadThumbnail } from "@/lib/thumbnail";
 import { type UploadProgress, UploadError, formatBytes, uploadVideo } from "@/lib/upload";
 import { AiAssist } from "./AiAssist";
@@ -17,7 +17,16 @@ const VISIBILITIES = [
   { value: "private", label: "Private", hint: "Only you" },
 ];
 
-export function UploadForm({ topics }: { topics: Topic[] }) {
+export function UploadForm({
+  topics,
+  teams,
+  defaultTeamSlug = "",
+}: {
+  topics: Topic[];
+  teams: Team[];
+  /** the uploader's own team, remembered from their last upload */
+  defaultTeamSlug?: string;
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -27,6 +36,7 @@ export function UploadForm({ topics }: { topics: Topic[] }) {
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"video" | "short">("video");
   const [topicSlug, setTopicSlug] = useState("");
+  const [teamSlug, setTeamSlug] = useState(defaultTeamSlug);
   const [category, setCategory] = useState("bug_fix");
   const [visibility, setVisibility] = useState("internal");
   const [links, setLinks] = useState<LinkDraft[]>([]);
@@ -112,6 +122,7 @@ export function UploadForm({ topics }: { topics: Topic[] }) {
           type,
           category,
           topic_slug: topicSlug,
+          team_slug: teamSlug,
           visibility,
           duration_sec: probe?.durationSec ?? null,
           width: probe?.width ?? null,
@@ -351,6 +362,23 @@ export function UploadForm({ topics }: { topics: Topic[] }) {
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Team</span>
+            <select
+              value={teamSlug}
+              onChange={(e) => setTeamSlug(e.target.value)}
+              className="h-10 rounded-lg border border-line bg-bg px-3 outline-none focus:border-brand"
+            >
+              <option value="">No team</option>
+              {teams.map((team) => (
+                <option key={team.slug} value={team.slug}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-muted">Who this came from — people can filter by it</span>
           </label>
 
           <label className="flex flex-col gap-1.5">

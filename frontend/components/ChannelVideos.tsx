@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   CATEGORY_LABELS,
+  type Team,
   type Topic,
   type Video,
   VISIBILITY_LABELS,
@@ -22,10 +23,12 @@ import { CommentIcon, PencilIcon } from "./icons";
 export function ChannelVideos({
   videos: initial,
   topics,
+  teams,
   isMe,
 }: {
   videos: Video[];
   topics: Topic[];
+  teams: Team[];
   isMe: boolean;
 }) {
   const [videos, setVideos] = useState(initial);
@@ -89,6 +92,7 @@ export function ChannelVideos({
                   </Badge>
                 )}
                 {video.topic_name && <Badge tone="plain">{video.topic_name}</Badge>}
+                {video.team_name && <Badge tone="plain">{video.team_name}</Badge>}
                 <Badge tone="plain">{CATEGORY_LABELS[video.category] ?? video.category}</Badge>
               </ul>
 
@@ -113,6 +117,7 @@ export function ChannelVideos({
         <VideoManageDialog
           video={editing}
           topics={topics}
+          teams={teams}
           onSaved={(saved) => {
             setVideos(videos.map((v) => (v.id === saved.id ? { ...v, ...saved } : v)));
             setEditing(null);

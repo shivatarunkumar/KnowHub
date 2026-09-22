@@ -9,6 +9,7 @@ from sqlalchemy import Row, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.models.team import Team
 from app.models.topic import Topic
 from app.models.user import User
 from app.models.video import (
@@ -85,6 +86,15 @@ async def resources_for(session: AsyncSession, video_id: uuid.UUID) -> dict:
     return {"links": list(links), "snippets": list(snippets)}
 
 
+async def team_by_slug(session: AsyncSession, slug: str | None) -> Team | None:
+    if not slug:
+        return None
+    team = await session.scalar(select(Team).where(Team.slug == slug, Team.is_active))
+    if team is None:
+        raise VideoError(f"Unknown team '{slug}'", field="team_slug")
+    return team
+
+
 async def topic_by_slug(session: AsyncSession, slug: str | None) -> Topic | None:
     if not slug:
         return None
@@ -111,7 +121,7 @@ def record_event(
 
 # ------------------------------------------------------------------ queries
 def _row_to_out(row: Row) -> dict:
-    video, display_name, handle, topic_slug, topic_name = row
+    video, display_name, handle, topic_slug, topic_name, team_slug, team_name = row
     return {
         **{c.name: getattr(video, c.name) for c in video.__table__.columns if hasattr(video, c.name)},
         "has_thumbnail": bool(video.thumbnail_path),
@@ -119,14 +129,17 @@ def _row_to_out(row: Row) -> dict:
         "owner_handle": handle,
         "topic_slug": topic_slug,
         "topic_name": topic_name,
+        "team_slug": team_slug,
+        "team_name": team_name,
     }
 
 
 def _base_query():
     return (
-        select(Video, User.display_name, User.handle, Topic.slug, Topic.name)
+        select(Video, User.display_name, User.handle, Topic.slug, Topic.name, Team.slug, Team.name)
         .join(User, User.id == Video.owner_id)
         .outerjoin(Topic, Topic.id == Video.primary_topic_id)
+        .outerjoin(Team, Team.id == Video.team_id)
         .where(Video.deleted_at.is_(None))
     )
 
@@ -161,6 +174,7 @@ async def list_feed(
     *,
     video_type: str | None = None,
     topic_slug: str | None = None,
+    team_slug: str | None = None,
     owner_id: uuid.UUID | None = None,
     viewer: User | None = None,
     limit: int = PAGE_SIZE,
@@ -171,6 +185,8 @@ async def list_feed(
         query = query.where(Video.type == video_type)
     if topic_slug:
         query = query.where(Topic.slug == topic_slug)
+    if team_slug:
+        query = query.where(Team.slug == team_slug)
     if owner_id:
         query = query.where(Video.owner_id == owner_id)
 
@@ -279,6 +295,12 @@ async def apply_patch(session: AsyncSession, video: Video, user: User, patch) ->
         if topic_id != video.primary_topic_id:
             video.primary_topic_id = topic_id
             changed.append("topic")
+    if patch.team_slug is not None:
+        team = await team_by_slug(session, patch.team_slug or None)
+        team_id = team.id if team else None
+        if team_id != video.team_id:
+            video.team_id = team_id
+            changed.append("team")
     if patch.visibility is not None and patch.visibility != video.visibility:
         if patch.visibility not in VISIBILITIES:
             raise VideoError(f"Unknown visibility '{patch.visibility}'", field="visibility")
