@@ -96,6 +96,36 @@ async def test_a_401_says_why_in_the_log(caplog):
     assert any("/auth/refresh" in r.message for r in caplog.records)
 
 
+async def test_debug_logs_the_request_on_the_way_in_and_out(caplog):
+    """A trace needs a start and an end: the entry line before the handler runs, and the
+    exit line with the outcome."""
+    with caplog.at_level(logging.DEBUG, logger="knowhub.request"):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            await client.get("/healthz")
+
+    messages = [r.getMessage() for r in caplog.records if r.name == "knowhub.request"]
+    entry = [m for m in messages if m.startswith("→")]
+    exit_ = [m for m in messages if m.startswith("←")]
+    assert entry and exit_
+    assert "GET /healthz" in entry[0]
+    # the entry line lands before the exit line, so a trace reads top to bottom
+    assert messages.index(entry[0]) < messages.index(exit_[0])
+    # and the handler's own finishing point is marked, separately from transfer
+    assert any("responding 200" in m for m in messages)
+
+
+def test_sql_tracing_follows_the_log_level():
+    """Queries are traced at DEBUG without needing SQL_ECHO, which stays as the firehose
+    for when you want every statement in full."""
+    from app.core.db import should_trace_sql
+
+    assert should_trace_sql(Settings(_env_file=None, log_level="DEBUG")) is True
+    assert should_trace_sql(Settings(_env_file=None, log_level="INFO")) is False
+    assert should_trace_sql(Settings(_env_file=None, log_level="INFO", sql_echo=True)) is True
+
+
 async def test_the_request_line_records_the_outcome(caplog):
     with caplog.at_level(logging.INFO, logger="knowhub.request"):
         async with httpx.AsyncClient(

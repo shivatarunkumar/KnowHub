@@ -17,11 +17,15 @@ MODEL and LLM_API_BASE override the per-provider defaults in config.py.
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from functools import lru_cache
 
 import httpx
 
 from app.core.config import Settings
+
+log = logging.getLogger("knowhub.ai")
 
 VERTEX_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -91,6 +95,8 @@ def _http_failure(response: httpx.Response, settings: Settings, what: str) -> AI
 async def _post(
     settings: Settings, url: str, payload: dict, headers: dict, timeout: float, what: str
 ) -> dict:
+    log.debug("  %s POST %s (model %s)", what, url, settings.ai_model)
+    started = time.perf_counter()
     try:
         async with _client(timeout=timeout) as client:
             response = await client.post(url, json=payload, headers=headers)
@@ -98,12 +104,20 @@ async def _post(
         raise AIUnavailable(f"{what} took too long to respond") from exc
     except httpx.HTTPError as exc:
         raise AIUnavailable(f"Can't reach {what} at {settings.ai_base_url or 'its endpoint'}: {exc}") from exc
+    log.debug(
+        "  %s replied %d in %dms (%d bytes)",
+        what,
+        response.status_code,
+        int((time.perf_counter() - started) * 1000),
+        len(response.content or b""),
+    )
     if response.status_code >= 400:
         raise _http_failure(response, settings, what)
     return response.json()
 
 
 async def _get(settings: Settings, url: str, headers: dict, timeout: float, what: str) -> dict:
+    log.debug("  %s GET %s", what, url)
     try:
         async with _client(timeout=timeout) as client:
             response = await client.get(url, headers=headers)

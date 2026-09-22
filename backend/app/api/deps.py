@@ -60,6 +60,7 @@ async def current_user_optional(
         return None
 
     user_var.set(user.handle)  # every later log line in this request names them
+    log.debug("  signed in as %s (%s)", user.handle, user.role)
     return user
 
 

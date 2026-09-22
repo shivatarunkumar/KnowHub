@@ -40,12 +40,35 @@ class RequestLogMiddleware:
         path = scope.get("path", "")
         raw_query = scope.get("query_string", b"").decode()
         status = 500
+        response_bytes = 0
+        content_type = ""
+        debug = log.isEnabledFor(logging.DEBUG)
+
+        if debug:
+            # entry: everything known before the handler runs, so a trace has a start
+            log.debug(
+                "→ %s %s%s from %s%s%s%s",
+                method,
+                path,
+                f"?{raw_query}" if raw_query else "",
+                scope["client"][0] if scope.get("client") else "unknown",
+                f" as={headers['content-type']}" if "content-type" in headers else "",
+                f" bytes={headers['content-length']}" if "content-length" in headers else "",
+                " cookies=yes" if headers.get("cookie") else " cookies=none",
+            )
 
         async def send_with_id(message: Message) -> None:
-            nonlocal status
+            nonlocal status, response_bytes, content_type
             if message["type"] == "http.response.start":
                 status = message["status"]
                 message.setdefault("headers", []).append((b"x-request-id", request_id.encode()))
+                if debug:
+                    out = {k.decode(): v.decode() for k, v in message.get("headers", [])}
+                    content_type = out.get("content-type", "")
+                    # the handler is done here: everything after this is transfer
+                    log.debug("  responding %d after %dms (%s)", status, timer.ms, content_type or "no type")
+            elif message["type"] == "http.response.body":
+                response_bytes += len(message.get("body", b"") or b"")
             await send(message)
 
         try:
@@ -62,20 +85,22 @@ class RequestLogMiddleware:
         else:
             level = logging.INFO
 
-        query = f"?{raw_query}" if raw_query and log.isEnabledFor(logging.DEBUG) else ""
+        query = f"?{raw_query}" if raw_query and debug else ""
         log.log(
             level,
-            "%s %s%s -> %d in %dms",
+            "← %s %s%s -> %d in %dms%s",
             method,
             path,
             query,
             status,
             timer.ms,
+            f" ({response_bytes} bytes)" if debug and response_bytes else "",
             extra={
                 "method": method,
                 "path": path,
                 "status": status,
                 "duration_ms": timer.ms,
+                "response_bytes": response_bytes or None,
                 "client": scope["client"][0] if scope.get("client") else None,
             },
         )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -13,6 +14,8 @@ from app.models.engagement import Comment, CommentReaction, Notification, VideoR
 from app.models.user import User
 from app.models.video import Video
 from app.services.video import VideoError
+
+log = logging.getLogger("knowhub.engagement")
 
 # @tarun.nagula14 — same shape as the handle column's CHECK constraint.
 # The lookbehind keeps email addresses out: in "name@example.com" the @ follows a letter.
@@ -115,6 +118,7 @@ async def set_reaction(session: AsyncSession, video: Video, user: User, value: i
     await session.flush()
 
     likes, dislikes = await counts_for(session, video.id)
+    log.debug("  reaction %+d by %s on video %s -> %d like(s)", value, user.handle, video.id, likes)
     # videos.like_count is the denormalised number shown on cards and feeds
     await session.execute(update(Video).where(Video.id == video.id).values(like_count=likes))
     await session.commit()
@@ -219,6 +223,13 @@ async def add_comment(
             parent_id = parent.parent_id
 
     comment = Comment(video_id=video.id, user_id=user.id, parent_id=parent_id, body=body.strip())
+    log.debug(
+        "  comment by %s on video %s (%s, %d chars)",
+        user.handle,
+        video.id,
+        "reply" if parent_id else "top level",
+        len(body.strip()),
+    )
     session.add(comment)
     await session.flush()
     await refresh_comment_count(session, video.id)

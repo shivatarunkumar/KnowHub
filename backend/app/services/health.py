@@ -7,6 +7,8 @@ Optional: ai (uploads still work without the writing assist) → reported as deg
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from collections.abc import Awaitable, Callable
 
 from sqlalchemy import text
@@ -16,6 +18,8 @@ from app.adapters.eventbus import get_event_bus
 from app.adapters.storage import get_storage
 from app.core.config import Settings
 from app.core.db import get_engine
+
+log = logging.getLogger("knowhub.health")
 
 CHECK_TIMEOUT_SECONDS = 8
 REQUIRED = ("database", "storage", "pubsub")
@@ -55,18 +59,26 @@ CHECKS: dict[str, Callable[[Settings], Awaitable[dict]]] = {
 }
 
 
-async def _run(check: Callable[[Settings], Awaitable[dict]], settings: Settings) -> dict:
+async def _run(name: str, check: Callable[[Settings], Awaitable[dict]], settings: Settings) -> dict:
+    """Run one dependency check, timed. The checks run concurrently, so a slow /health is
+    only as slow as its slowest dependency — and this says which one that was."""
+    started = time.perf_counter()
     try:
-        return await asyncio.wait_for(check(settings), CHECK_TIMEOUT_SECONDS)
+        result = await asyncio.wait_for(check(settings), CHECK_TIMEOUT_SECONDS)
     except TimeoutError:
+        log.warning("%s check timed out after %ds", name, CHECK_TIMEOUT_SECONDS)
         return {"ok": False, "error": f"timed out after {CHECK_TIMEOUT_SECONDS}s"}
     except Exception as exc:  # report, don't crash the health endpoint
+        log.warning("%s check failed: %s: %s", name, type(exc).__name__, exc)
         return {"ok": False, "error": f"{type(exc).__name__}: {exc}"[:300]}
+    elapsed = int((time.perf_counter() - started) * 1000)
+    log.debug("  check %-8s %-4s %dms", name, "ok" if result.get("ok") else "FAIL", elapsed)
+    return result
 
 
 async def run_checks(settings: Settings) -> tuple[str, dict[str, dict]]:
     names = list(CHECKS)
-    results = await asyncio.gather(*(_run(CHECKS[n], settings) for n in names))
+    results = await asyncio.gather(*(_run(n, CHECKS[n], settings) for n in names))
     checks = dict(zip(names, results, strict=True))
     if not all(checks[n]["ok"] for n in REQUIRED):
         status = "down"

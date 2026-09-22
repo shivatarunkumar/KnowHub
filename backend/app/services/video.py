@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -23,6 +24,8 @@ from app.models.video import (
     VideoSnippet,
     VideoViewer,
 )
+
+log = logging.getLogger("knowhub.video")
 
 PAGE_SIZE = 24
 
@@ -192,17 +195,36 @@ async def list_feed(
         query = query.where(Video.owner_id == owner_id)
 
     rows = await session.execute(query.order_by(Video.published_at.desc().nullslast()).limit(limit))
-    return [_row_to_out(row) for row in rows]
+    items = [_row_to_out(row) for row in rows]
+    log.debug(
+        "  feed: type=%s topics=%s team=%s owner=%s viewer=%s -> %d video(s)",
+        video_type or "any",
+        topic_slugs or "any",
+        team_slug or "any",
+        owner_id or "any",
+        viewer.handle if viewer else "anonymous",
+        len(items),
+    )
+    return items
 
 
 async def get_video(session: AsyncSession, video_id: uuid.UUID, viewer: User | None) -> dict:
     row = (await session.execute(_base_query().where(Video.id == video_id))).one_or_none()
     if row is None:
+        log.debug("  video %s: no such row (or deleted)", video_id)
         raise VideoError("Video not found", status_code=404)
     video: Video = row[0]
     if not await may_watch(session, video, viewer):
+        # a 404 rather than a 403 on purpose: a stranger learns nothing about what exists
+        log.info(
+            "  video %s is %s; %s may not watch it, answering 404",
+            video_id,
+            video.visibility,
+            viewer.handle if viewer else "an anonymous visitor",
+        )
         raise VideoError("Video not found", status_code=404)
     if video.status != "READY" and (viewer is None or viewer.id != video.owner_id):
+        log.debug("  video %s is %s, not READY", video_id, video.status)
         raise VideoError("This video is still processing", status_code=409)
     return {**_row_to_out(row), **await resources_for(session, video.id)}
 
@@ -322,7 +344,10 @@ async def apply_patch(session: AsyncSession, video: Video, user: User, patch) ->
         changed.append("resources")
 
     if changed:
+        log.info("video %s edited by %s: %s", video.id, user.handle, ", ".join(changed))
         record_event(session, video, user.id, "edited", fields=changed)
+    else:
+        log.debug("  video %s: nothing to change", video.id)
     if "visibility" in changed:
         record_event(session, video, user.id, "visibility_changed", visibility=video.visibility)
     if "comments" in changed:

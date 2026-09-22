@@ -178,10 +178,27 @@ Every request gets an id, returned as the `x-request-id` header and printed on e
 it produced, so one line leads to the rest of that request. An id arriving from a proxy is
 kept, so a trace spans both.
 
+At `DEBUG` a single call reads as a trace, which is how you find where the time went:
+
+```
+→ GET /api/v1/health from 127.0.0.1 cookies=none
+    gcs lookup 1 bucket(s) in 267ms
+    check storage  ok   919ms
+    check ai       FAIL 28ms
+    sql 1.8ms  SELECT max(version), count(*) FROM schema_migrations
+    check database ok   956ms
+    check pubsub   ok   1339ms
+    responding 200 after 1913ms (application/json)
+← GET /api/v1/health -> 200 in 1914ms (373 bytes)
+```
+
+Queries slower than 500ms are logged at `INFO` too, so they show up without anyone asking
+for a trace.
+
 | Setting | Effect |
 |---|---|
 | `LOG_LEVEL=INFO` | one line per request, plus decisions worth knowing about (default) |
-| `LOG_LEVEL=DEBUG` | adds query strings, storage operations, and why a token was rejected |
+| `LOG_LEVEL=DEBUG` | a full trace of each call: an entry line, every SQL statement with its duration, every storage and AI round-trip, each health check timed, and the response before and after transfer |
 | `LOG_FORMAT=json` | one JSON object per line, for Cloud Logging |
 | `SQL_ECHO=true` | every statement SQLAlchemy runs — enormous, so opt in |
 
