@@ -6,6 +6,8 @@ export type Topic = {
   name: string;
   description: string | null;
   icon: string | null;
+  /** published videos filed under it: the chip bar leads with the busiest */
+  video_count: number;
 };
 
 // Server components call FastAPI directly; the browser goes through the /api rewrite.

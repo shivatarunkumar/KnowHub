@@ -30,3 +30,16 @@ async def test_lists_seeded_topics_in_order(db_available):
     slugs = [t["slug"] for t in response.json()]
     # "gcp" is the umbrella topic and sorts above the individual services
     assert slugs[:4] == ["gcp", "bigquery", "pubsub", "gke"]
+
+
+async def test_topics_carry_a_video_count(db_available):
+    """The chip bar leads with the topics that have something in them, so the count has
+    to come from the API rather than being guessed in the browser."""
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        topics = (await client.get("/api/v1/topics")).json()
+    await get_engine().dispose()
+
+    assert all("video_count" in topic for topic in topics)
+    assert all(isinstance(topic["video_count"], int) for topic in topics)
+    # a freshly seeded topic nobody has filed anything under counts zero, not null
+    assert any(topic["video_count"] == 0 for topic in topics)

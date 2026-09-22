@@ -66,9 +66,13 @@ runtime but can only say "timed out"; these say why.
 
 ### 2.1 Viewing
 - **Home feed**: grid of video cards (thumbnail, duration, title, uploader, views, age). New and anonymous visitors see *Latest + Trending*. Logged-in users also see *From your subscriptions* and *Recommended for your topics*.
-- **Topic chips bar** across the top of home (All, BigQuery, Pub/Sub, GKE, Cloud SQL, …), and a
-  **team filter** beside it (All teams by default, grouped by division). Topics say what a video
-  is about, teams say who it came from, and the two combine.
+- **Topic chips bar** across the top of home, and a **team filter** beside it (All teams by
+  default, grouped by division). Topics say what a video is about, teams say who it came
+  from, and the two combine.
+  - The bar shows only topics that **have videos**, busiest first, capped at eight, with the
+    rest behind an "N more" menu with a search box. `GET /topics` returns `video_count` for
+    each, so the ranking comes from the data rather than a guess in the browser. A selected
+    topic stays on the bar even when nothing is filed under it.
 - **Watch page**: adaptive HLS player (quality selector, speed, captions later, theater/fullscreen, keyboard shortcuts, resume position). Below the player: title, view count, like/dislike, share, save, subscribe, description with links (incident, Jira, repo, PR), and comments. Sidebar: "Up next" related videos.
 - **Shorts**: vertical 9:16 full-height feed with swipe/scroll and autoplay loop. Like, comment and share buttons on the right. A Shorts shelf on home.
 - **Channel page** (each user is a channel): banner, avatar, subscriber count, Videos / Shorts / Playlists tabs.

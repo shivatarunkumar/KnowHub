@@ -149,11 +149,13 @@ function TopicCloud({ topics, active }: { topics: Topic[]; active: string | null
     );
   }
 
+  // busiest first, so the eight that fit are the eight worth showing
+  const ranked = [...topics].sort((a, b) => b.video_count - a.video_count);
   // an active topic is always visible, even when it sits past the cut
-  const shown = expanded ? topics : topics.slice(0, 8);
+  const shown = expanded ? ranked : ranked.slice(0, 8);
   const activeHidden = active && !shown.some((t) => t.slug === active);
-  const visible = activeHidden ? [...shown, ...topics.filter((t) => t.slug === active)] : shown;
-  const hiddenCount = topics.length - visible.length;
+  const visible = activeHidden ? [...shown, ...ranked.filter((t) => t.slug === active)] : shown;
+  const hiddenCount = ranked.length - visible.length;
 
   return (
     <div className="px-3 pb-2">

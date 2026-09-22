@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TeamFilter } from "@/components/TeamFilter";
+import { TopicChips } from "@/components/TopicChips";
 import { VideoCard } from "@/components/VideoCard";
 import { getFeed, getTeams, getTopics } from "@/lib/api";
 
@@ -17,24 +18,12 @@ export default async function HomePage({
   const selectedTopic = topics.find((t) => t.slug === selected);
   const team = teams.find((t) => t.slug === selectedTeam);
 
-  // keep the other filter when switching one of them: the two combine
-  const chipHref = (slug?: string) => {
-    const query = new URLSearchParams();
-    if (slug) query.set("topic", slug);
-    if (selectedTeam) query.set("team", selectedTeam);
-    const qs = query.toString();
-    return qs ? `/?${qs}` : "/";
-  };
-
   return (
     <div className="px-4 pb-10 lg:px-6">
       <div className="no-scrollbar sticky top-14 z-20 -mx-4 flex items-center gap-3 overflow-x-auto bg-bg px-4 py-3 lg:-mx-6 lg:px-6">
         <TeamFilter teams={teams} selected={selectedTeam ?? ""} topic={selected ?? ""} />
         <span aria-hidden="true" className="h-6 w-px shrink-0 bg-line" />
-        <Chip href={chipHref()} label="All" active={!selectedTopic} />
-        {topics.map((t) => (
-          <Chip key={t.slug} href={chipHref(t.slug)} label={t.name} active={t.slug === selected} />
-        ))}
+        <TopicChips topics={topics} selected={selected ?? ""} team={selectedTeam ?? ""} />
       </div>
 
       {(selectedTopic || team) && (
@@ -81,19 +70,5 @@ export default async function HomePage({
         </div>
       )}
     </div>
-  );
-}
-
-function Chip({ href, label, active }: { href: string; label: string; active: boolean }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium ${
-        active ? "bg-chip-active text-chip-active-text" : "bg-surface hover:bg-surface-hover"
-      }`}
-    >
-      {label}
-    </Link>
   );
 }
