@@ -69,10 +69,13 @@ runtime but can only say "timed out"; these say why.
 - **Topic chips bar** across the top of home, and a **team filter** beside it (All teams by
   default, grouped by division). Topics say what a video is about, teams say who it came
   from, and the two combine.
-  - The bar shows only topics that **have videos**, busiest first, capped at eight, with the
-    rest behind an "N more" menu with a search box. `GET /topics` returns `video_count` for
-    each, so the ranking comes from the data rather than a guess in the browser. A selected
-    topic stays on the bar even when nothing is filed under it.
+  - Both are dropdowns rather than chip bars: 25 topics and 18 teams scrolled off the
+    screen. **Topics is multi-select** — ticking several means "in any of them", because a
+    video has one primary topic and "all of them" would match nothing. Each has a search
+    box, and topics are ordered by `video_count` (returned by `GET /topics`) so the ones
+    with something in them come first. What is selected also appears as removable chips
+    beside the dropdowns, with "Clear all".
+  - The feed takes `?topic=` repeated for a multi-select: `?topic=bigquery&topic=gke&team=fraud`.
 - **Watch page**: adaptive HLS player (quality selector, speed, captions later, theater/fullscreen, keyboard shortcuts, resume position). Below the player: title, view count, like/dislike, share, save, subscribe, description with links (incident, Jira, repo, PR), and comments. Sidebar: "Up next" related videos.
 - **Shorts**: vertical 9:16 full-height feed with swipe/scroll and autoplay loop. Like, comment and share buttons on the right. A Shorts shelf on home.
 - **Channel page** (each user is a channel): banner, avatar, subscriber count, Videos / Shorts / Playlists tabs.

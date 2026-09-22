@@ -400,17 +400,19 @@ async def delete_video(
 @router.get("/videos/feed", response_model=VideoPage)
 async def feed(
     video_type: str | None = Query(default=None, alias="type"),
-    topic: str | None = None,
+    topic: Annotated[list[str] | None, Query(description="repeat for several: ?topic=a&topic=b")] = None,
     team: str | None = None,
     limit: int = 24,
     user: User | None = Depends(current_user_optional),
     session: AsyncSession = Depends(get_session),
 ) -> VideoPage:
-    """Newest videos, optionally filtered by type, topic or team. Open to anyone."""
+    """Newest videos, optionally filtered by type, topic(s) or team. Open to anyone.
+
+    Several topics mean "any of these"; a topic and a team together mean both."""
     items = await video_service.list_feed(
         session,
         video_type=video_type,
-        topic_slug=topic,
+        topic_slugs=topic,
         team_slug=team,
         viewer=user,
         limit=min(limit, 100),

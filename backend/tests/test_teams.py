@@ -104,6 +104,38 @@ async def test_team_and_topic_filters_combine(uploader):
     assert wrong_team["id"] not in both
 
 
+async def test_several_topics_mean_any_of_them(uploader):
+    """The topic filter is multi-select. A video has one primary topic, so "all of these"
+    would match nothing — the filter has to read as "any"."""
+    bq = await upload(uploader, "Slot contention", topic_slug="bigquery")
+    gke = await upload(uploader, "Pod evictions", topic_slug="gke")
+    other = await upload(uploader, "Bucket lifecycle", topic_slug="cloud-storage")
+
+    both = [
+        v["id"] for v in (await uploader.get("/api/v1/videos/feed?topic=bigquery&topic=gke")).json()["items"]
+    ]
+    assert bq["id"] in both and gke["id"] in both
+    assert other["id"] not in both
+
+    # one topic still behaves as it always did
+    just_one = [v["id"] for v in (await uploader.get("/api/v1/videos/feed?topic=gke")).json()["items"]]
+    assert just_one.count(gke["id"]) == 1 and bq["id"] not in just_one
+
+
+async def test_several_topics_still_narrow_to_one_team(uploader):
+    match = await upload(uploader, "Fraud on GKE", topic_slug="gke", team_slug="fraud")
+    wrong_team = await upload(uploader, "SRE on GKE", topic_slug="gke", team_slug="sre")
+
+    found = [
+        v["id"]
+        for v in (await uploader.get("/api/v1/videos/feed?topic=gke&topic=bigquery&team=fraud")).json()[
+            "items"
+        ]
+    ]
+    assert match["id"] in found
+    assert wrong_team["id"] not in found
+
+
 async def test_the_owner_can_change_a_videos_team(uploader):
     video = await upload(uploader, "Moved to another team", team_slug="cards")
     edited = await uploader.patch(f"/api/v1/videos/{video['id']}", json={"team_slug": "payments"})

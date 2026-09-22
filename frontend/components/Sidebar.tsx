@@ -41,7 +41,7 @@ export function Sidebar({
   user: SessionUser | null;
 }) {
   const pathname = usePathname();
-  const activeTopic = useSearchParams().get("topic");
+  const activeTopic = useSearchParams().get("topic"); // one of possibly several
 
   if (!expanded) {
     // Mini rail (desktop): icon + tiny label, for when the guide is collapsed.

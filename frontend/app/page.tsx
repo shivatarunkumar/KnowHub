@@ -1,50 +1,75 @@
 import Link from "next/link";
 import { TeamFilter } from "@/components/TeamFilter";
-import { TopicChips } from "@/components/TopicChips";
+import { TopicFilter } from "@/components/TopicFilter";
 import { VideoCard } from "@/components/VideoCard";
 import { getFeed, getTeams, getTopics } from "@/lib/api";
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ topic?: string; team?: string }>;
+  // topic repeats for a multi-select: ?topic=bigquery&topic=gke
+  searchParams: Promise<{ topic?: string | string[]; team?: string }>;
 }) {
-  const [{ topic: selected, team: selectedTeam }, topics, teams] = await Promise.all([
-    searchParams,
-    getTopics(),
-    getTeams(),
-  ]);
-  const videos = await getFeed({ topic: selected, team: selectedTeam });
-  const selectedTopic = topics.find((t) => t.slug === selected);
+  const [params, topics, teams] = await Promise.all([searchParams, getTopics(), getTeams()]);
+  const selectedTopics = [params.topic ?? []].flat().filter(Boolean);
+  const selectedTeam = params.team ?? "";
+
+  const videos = await getFeed({ topics: selectedTopics, team: selectedTeam });
   const team = teams.find((t) => t.slug === selectedTeam);
+  const chosen = topics.filter((t) => selectedTopics.includes(t.slug));
+  const filtered = chosen.length > 0 || Boolean(team);
+
+  // dropping one topic keeps the rest, and the team
+  const withoutTopic = (slug: string) => {
+    const query = new URLSearchParams();
+    for (const other of selectedTopics.filter((s) => s !== slug)) query.append("topic", other);
+    if (selectedTeam) query.set("team", selectedTeam);
+    const qs = query.toString();
+    return qs ? `/?${qs}` : "/";
+  };
 
   return (
     <div className="px-4 pb-10 lg:px-6">
-      <div className="no-scrollbar sticky top-14 z-20 -mx-4 flex items-center gap-3 overflow-x-auto bg-bg px-4 py-3 lg:-mx-6 lg:px-6">
-        <TeamFilter teams={teams} selected={selectedTeam ?? ""} topic={selected ?? ""} />
-        <span aria-hidden="true" className="h-6 w-px shrink-0 bg-line" />
-        <TopicChips topics={topics} selected={selected ?? ""} team={selectedTeam ?? ""} />
+      <div className="no-scrollbar sticky top-14 z-20 -mx-4 flex items-center gap-2 overflow-x-auto bg-bg px-4 py-3 lg:-mx-6 lg:px-6">
+        <TeamFilter teams={teams} selected={selectedTeam} topics={selectedTopics} />
+        <TopicFilter topics={topics} selected={selectedTopics} team={selectedTeam} />
+
+        {/* what is currently on, and one click to take it off */}
+        {chosen.map((topic) => (
+          <Link
+            key={topic.slug}
+            href={withoutTopic(topic.slug)}
+            className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-surface px-2.5 py-1.5 text-sm font-medium hover:bg-surface-hover"
+          >
+            {topic.name}
+            <span aria-hidden="true" className="text-muted">
+              ×
+            </span>
+            <span className="sr-only">Remove {topic.name} filter</span>
+          </Link>
+        ))}
+
+        {filtered && (
+          <Link
+            href="/"
+            className="shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium text-brand hover:bg-surface"
+          >
+            Clear all
+          </Link>
+        )}
       </div>
 
-      {(selectedTopic || team) && (
+      {filtered && (
         <p className="mt-1 text-sm text-muted">
           {videos.length} {videos.length === 1 ? "video" : "videos"}
-          {selectedTopic && <> on {selectedTopic.name}</>}
+          {chosen.length > 0 && <> in {chosen.map((t) => t.name).join(" or ")}</>}
           {team && <> from {team.name}</>}
         </p>
       )}
 
       {videos.length === 0 ? (
         <section className="mx-auto mt-16 max-w-md text-center">
-          <h1 className="text-xl">
-            {team && selectedTopic
-              ? `Nothing from ${team.name} on ${selectedTopic.name} yet`
-              : team
-                ? `No videos from ${team.name} yet`
-                : selectedTopic
-                  ? `No ${selectedTopic.name} videos yet`
-                  : "No videos yet"}
-          </h1>
+          <h1 className="text-xl">{filtered ? "Nothing matches those filters yet" : "No videos yet"}</h1>
           <p className="mt-2 text-sm text-muted">
             Share a bug fix, an incident resolution or a how-to, and it shows up here.
           </p>
@@ -55,8 +80,11 @@ export default async function HomePage({
             >
               Upload a video
             </Link>
-            {(team || selectedTopic) && (
-              <Link href="/" className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-surface">
+            {filtered && (
+              <Link
+                href="/"
+                className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-surface"
+              >
                 Clear filters
               </Link>
             )}

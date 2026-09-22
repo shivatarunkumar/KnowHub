@@ -5,18 +5,18 @@ import type { Team } from "@/lib/api";
 import { PeopleIcon } from "./icons";
 
 /**
- * "All teams" by default. A dropdown rather than another row of chips: there are as many
- * teams as topics, and two scrolling chip bars would be a wall of pills.
+ * No team selected by default, which means every team. A dropdown rather than another row
+ * of chips: there are as many teams as topics, and two chip bars would be a wall of pills.
  */
 export function TeamFilter({
   teams,
   selected,
-  topic,
+  topics,
 }: {
   teams: Team[];
   selected: string;
   /** kept when the team changes, so the two filters combine */
-  topic: string;
+  topics: string[];
 }) {
   const router = useRouter();
   if (teams.length === 0) return null;
@@ -26,7 +26,7 @@ export function TeamFilter({
 
   function choose(slug: string) {
     const query = new URLSearchParams();
-    if (topic) query.set("topic", topic);
+    for (const topic of topics) query.append("topic", topic);
     if (slug) query.set("team", slug);
     const qs = query.toString();
     router.push(qs ? `/?${qs}` : "/");
@@ -48,7 +48,7 @@ export function TeamFilter({
           selected ? "bg-chip-active text-chip-active-text" : "bg-surface hover:bg-surface-hover"
         }`}
       >
-        <option value="">All teams</option>
+        <option value="">Teams</option>
         {divisions.map((division) => (
           <optgroup key={division} label={division}>
             {teams

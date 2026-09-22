@@ -19,7 +19,7 @@ export default async function WatchPage({ params }: { params: Promise<{ id: stri
   // sidebar is never empty just because a topic has one video in it.
   const [reaction, sameTopic, everything] = await Promise.all([
     getReaction(id, cookieHeader),
-    video.topic_slug ? getFeed({ topic: video.topic_slug }) : Promise.resolve([]),
+    video.topic_slug ? getFeed({ topics: [video.topic_slug] }) : Promise.resolve([]),
     getFeed(),
   ]);
 

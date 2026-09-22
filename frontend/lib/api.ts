@@ -112,10 +112,11 @@ export const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export async function getFeed(
-  params: { topic?: string; team?: string; type?: string } = {},
+  params: { topics?: string[]; team?: string; type?: string } = {},
 ): Promise<Video[]> {
   const query = new URLSearchParams();
-  if (params.topic) query.set("topic", params.topic);
+  // repeated, not comma-joined: ?topic=a&topic=b means "in any of these"
+  for (const topic of params.topics ?? []) query.append("topic", topic);
   if (params.team) query.set("team", params.team);
   if (params.type) query.set("type", params.type);
   try {

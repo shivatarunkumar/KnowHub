@@ -173,7 +173,7 @@ async def list_feed(
     session: AsyncSession,
     *,
     video_type: str | None = None,
-    topic_slug: str | None = None,
+    topic_slugs: list[str] | None = None,
     team_slug: str | None = None,
     owner_id: uuid.UUID | None = None,
     viewer: User | None = None,
@@ -183,8 +183,9 @@ async def list_feed(
     query = _base_query().where(Video.status == "READY", visible_clause(viewer))
     if video_type:
         query = query.where(Video.type == video_type)
-    if topic_slug:
-        query = query.where(Topic.slug == topic_slug)
+    if topic_slugs:
+        # any of them: a video has one primary topic, so requiring all would match nothing
+        query = query.where(Topic.slug.in_(topic_slugs))
     if team_slug:
         query = query.where(Team.slug == team_slug)
     if owner_id:
