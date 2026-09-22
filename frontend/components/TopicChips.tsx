@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Topic } from "@/lib/api";
 import { CloseIcon, SearchIcon } from "./icons";
 
 const VISIBLE = 8;
+const PANEL_WIDTH = 288; // w-72
+const GUTTER = 12;
 
 /**
  * Chips for the topics that actually have videos, and a menu for the rest.
@@ -26,12 +28,31 @@ export function TopicChips({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // The chip bar scrolls horizontally, and a scroll container clips absolutely-positioned
+  // children on both axes — the menu came out sliced off below its search box. So the
+  // panel is positioned against the viewport instead, anchored to the button.
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  const place = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    setAnchor({
+      top: rect.bottom + 8,
+      // keep the whole panel on screen when the button sits near the right edge
+      left: Math.max(GUTTER, Math.min(rect.left, window.innerWidth - PANEL_WIDTH - GUTTER)),
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     searchRef.current?.focus();
+    // the page or the bar can scroll under an open menu, so follow the button
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
     function onPointerDown(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
     }
@@ -41,10 +62,12 @@ export function TopicChips({
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, place]);
 
   function href(slug?: string) {
     const params = new URLSearchParams();
@@ -88,7 +111,11 @@ export function TopicChips({
         <div className="relative shrink-0" ref={menuRef}>
           <button
             type="button"
-            onClick={() => setOpen((v) => !v)}
+            ref={buttonRef}
+            onClick={() => {
+              place();
+              setOpen((v) => !v);
+            }}
             aria-haspopup="menu"
             aria-expanded={open}
             className="flex items-center gap-1 whitespace-nowrap rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:bg-surface"
@@ -99,10 +126,11 @@ export function TopicChips({
             </svg>
           </button>
 
-          {open && (
+          {open && anchor && (
             <div
               role="menu"
-              className="absolute left-0 top-11 z-30 w-72 overflow-hidden rounded-xl border border-line bg-bg shadow-xl"
+              style={{ top: anchor?.top ?? 0, left: anchor?.left ?? 0 }}
+              className="fixed z-50 w-72 overflow-hidden rounded-xl border border-line bg-bg shadow-xl"
             >
               <div className="flex items-center gap-2 border-b border-line px-3 py-2">
                 <SearchIcon width={15} height={15} className="shrink-0 text-muted" />
