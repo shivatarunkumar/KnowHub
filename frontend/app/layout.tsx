@@ -26,6 +26,17 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap"
         />
+        {/* Applies the saved theme before the first paint. It has to be inline and
+            blocking: anything later — including React hydration — happens after the
+            browser has already painted, which is the flash of the wrong palette everyone
+            has seen on a dark-mode site. The server cannot help, because localStorage is
+            only readable here. */}
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("knowhub-theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t)}}catch(e){}})();`,
+          }}
+        />
       </head>
       <body className="font-sans antialiased">
         <AppShell topics={topics} user={user}>

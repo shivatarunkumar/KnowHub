@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import type { SessionUser } from "@/lib/session";
 import { AccountMenu } from "./AccountMenu";
+import { ThemeToggle } from "./ThemeToggle";
 import { LogoMark, MenuIcon, SearchIcon } from "./icons";
 
 export function TopBar({ onMenu, user }: { onMenu: () => void; user: SessionUser | null }) {
@@ -51,7 +52,10 @@ export function TopBar({ onMenu, user }: { onMenu: () => void; user: SessionUser
         </button>
       </form>
 
-      <AccountMenu user={user} />
+      <div className="flex items-center gap-1">
+        <ThemeToggle />
+        <AccountMenu user={user} />
+      </div>
     </header>
   );
 }

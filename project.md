@@ -10,7 +10,7 @@ KnowHub — the name is short for **Knowledge Hub** — is an internal video and
 - Make it quick to find and watch an existing resolution before re-solving a problem.
 - Make it easy to record and upload a fix with rich context (topic, incident, ticket, repo).
 - Tell people when new content appears on topics they care about (e.g. BigQuery, Pub/Sub).
-- Feel familiar: the interactions people already know from any video site, with our own fonts and colors — a deep forest green with warm cream surfaces, Source Serif 4 for display type and Figtree for everything else. Colours are tokens in `globals.css`; no component names a colour.
+- Feel familiar: the interactions people already know from any video site, with our own fonts and colors — and a Light / Dark / Auto choice in the top bar, remembered per browser and applied before the first paint so the page never flashes the wrong palette — a deep forest green with warm cream surfaces, Source Serif 4 for display type and Figtree for everything else. Colours are tokens in `globals.css`; no component names a colour.
 
 **Access model**
 | Action | Anonymous | Logged in |

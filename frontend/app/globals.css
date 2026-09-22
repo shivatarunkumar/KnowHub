@@ -23,8 +23,13 @@
   --bad: #b4342a;
 }
 
+/* Dark mode comes from the OS unless someone picks a theme: ThemeToggle sets
+   data-theme on <html>, and a small script in the layout applies the saved choice before
+   the first paint so the page never flashes the wrong palette.
+
+   The two rules below must hold the same tokens — one for "auto", one for "always dark". */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #0b1a14;
     --surface: #12271f;
@@ -43,6 +48,31 @@
     --warn: #d8a34a;
     --bad: #e57a70;
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1a14;
+  --surface: #12271f;
+  --surface-hover: #1b352b;
+  --text: #e9f0ec;
+  --muted: #9db0a7;
+  --border: #1e382d;
+  --brand: #6cc295;
+  --brand-hover: #92d7b1;
+  --brand-contrast: #06140f;
+  --accent: #a4d44f;
+  --accent-contrast: #06140f;
+  --chip-active: #e9f0ec;
+  --chip-active-text: #0b1a14;
+  --ok: #58c08a;
+  --warn: #d8a34a;
+  --bad: #e57a70;
+}
+
+/* Explicitly light, whatever the OS says. */
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 @theme inline {
@@ -65,7 +95,9 @@
   /* Loaded in app/layout.tsx from Google Fonts. If that is blocked — a locked-down
      network, offline — the next family in each stack takes over and the app still
      looks deliberate. */
-  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
   --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
 }
 
@@ -106,7 +138,12 @@ h1,
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
   animation: knowhub-sheen 1.5s ease-in-out infinite;
 }
 
