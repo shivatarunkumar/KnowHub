@@ -50,6 +50,11 @@ class Settings(BaseSettings):
 
     # --- app ---
     app_env: Literal["local", "dev", "stage", "prod"] = "local"
+    # INFO: one line per request plus decisions worth knowing about.
+    # DEBUG: adds query strings, payload sizes, storage and AI call detail.
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_format: Literal["text", "json"] = "text"
+    sql_echo: bool = False  # every statement SQLAlchemy runs; enormous, so opt in
     api_base_url: str = "http://localhost:8000"
     web_base_url: str = "http://localhost:3000"
     cors_origins: str = "http://localhost:3000"
@@ -117,6 +122,12 @@ class Settings(BaseSettings):
     # where the Vertex models live; empty falls back to GCP_REGION ("global" is allowed)
     vertex_location: str = ""
     ai_enhance_max_chars: int = 5000
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def _uppercase_level(cls, value: str) -> str:
+        """LOG_LEVEL=debug and LOG_LEVEL=DEBUG mean the same thing."""
+        return value.strip().upper() if isinstance(value, str) else value
 
     @field_validator("provider", mode="before")
     @classmethod

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -19,6 +20,8 @@ from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 from app.core.config import Settings
+
+log = logging.getLogger("knowhub.auth")
 
 _hasher = PasswordHasher()
 ALGORITHM = "HS256"
@@ -60,9 +63,19 @@ def decode_access_token(settings: Settings, token: str) -> dict[str, Any] | None
     """Return the claims, or None if the token is invalid, expired or the wrong type."""
     try:
         claims = jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITHM])
-    except jwt.PyJWTError:
+    except jwt.ExpiredSignatureError:
+        log.debug("access token expired (the browser should call /auth/refresh)")
         return None
-    return claims if claims.get("typ") == "access" else None
+    except jwt.InvalidSignatureError:
+        log.warning("access token signature does not match JWT_SECRET: was the secret changed?")
+        return None
+    except jwt.PyJWTError as exc:
+        log.warning("access token could not be decoded: %s", exc.__class__.__name__)
+        return None
+    if claims.get("typ") != "access":
+        log.warning("token is a %r, not an access token", claims.get("typ"))
+        return None
+    return claims
 
 
 def hash_token(token: str) -> str:

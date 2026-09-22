@@ -6,6 +6,7 @@ and nothing is saved until the author accepts the suggestion.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -24,6 +25,9 @@ FIELDS = ("title", "description", "tags", "comment")
 MAX_TITLE_CHARS = 200
 HEADINGS = ("problem", "root cause", "fix", "takeaways")
 MAX_PER_MINUTE = 10
+
+
+log = logging.getLogger("knowhub.ai")
 
 
 class AssistError(Exception):
@@ -139,12 +143,22 @@ async def enhance(
             settings, system=load_prompt(field), prompt=build_prompt(field, text, context)
         )
     except ai.AIUnavailable as exc:
+        log.warning("ai %s failed on %s/%s: %s", field, settings.provider, settings.ai_model, exc)
         record.error = str(exc)[:500]
         session.add(record)
         await session.commit()
         raise AssistError(str(exc), status_code=503) from exc
 
     suggestion = clean(field, output)
+    log.info(
+        "ai %s: %s/%s rewrote %d chars into %d in %dms",
+        field,
+        settings.provider,
+        settings.ai_model,
+        len(text),
+        len(suggestion),
+        int((datetime.now(UTC) - started).total_seconds() * 1000),
+    )
     record.output_chars = len(suggestion)
     record.latency_ms = int((datetime.now(UTC) - started).total_seconds() * 1000)
     session.add(record)

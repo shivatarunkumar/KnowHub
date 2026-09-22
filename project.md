@@ -547,7 +547,7 @@ KnowHub/
 - **Security**: private raw bucket; signed URLs expire in 15 min; upload size and MIME validation; per-user folder isolation checked server-side; rate-limited auth endpoints; CORS locked to the web origin; audit via `upload_events`.
 - **Performance**: API p95 < 300 ms for feed/search; playback start < 2 s through the CDN.
 - **Reliability**: Pub/Sub handlers are idempotent (keyed by video_id and event), with dead-letter topics and retries.
-- **Observability**: structured JSON logs → Cloud Logging, OpenTelemetry traces → Cloud Trace, error alerts.
+- **Observability**: one log line per request with a request id (returned as `x-request-id` and carried on every line of that request), the signed-in user, status and duration. `LOG_LEVEL` and `LOG_FORMAT` in `.env`; `json` emits one object per line for Cloud Logging. Decisions that would otherwise be invisible are logged with their reason: why a 401 happened, which login check failed (the response stays identical), uploads starting and finishing, AI provider/model/latency, refresh-token reuse. Still to come: OpenTelemetry traces → Cloud Trace, error alerts.
 - **Limits (configurable)**: video ≤ 5 GB / 2 h; short ≤ 60 s, vertical.
 
 ## 10. Open Questions / Decisions Log

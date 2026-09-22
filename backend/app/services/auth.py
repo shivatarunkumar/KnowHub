@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -13,6 +14,8 @@ from app.core import security
 from app.core.config import Settings
 from app.models.user import PasswordResetToken, RefreshToken, User
 from app.schemas.auth import RegisterIn
+
+log = logging.getLogger("knowhub.auth")
 
 MAX_FAILED_LOGINS = 5
 LOCKOUT_MINUTES = 15
@@ -89,11 +92,14 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> User
 
     if user is None:
         security.hash_password(password)  # keep the timing similar to a real check
+        log.info("login failed: no account for that email (the reply does not say so)")
         raise invalid
     if not user.is_active:
+        log.info("login refused: %s is deactivated", user.handle)
         raise AuthError("This account is disabled", status_code=403)
     if user.locked_until and user.locked_until > now:
         minutes = max(1, int((user.locked_until - now).total_seconds() // 60) + 1)
+        log.info("login refused: %s is locked for another %d minute(s)", user.handle, minutes)
         raise AuthError(f"Too many failed attempts. Try again in {minutes} minute(s).", status_code=429)
 
     if not security.verify_password(password, user.password_hash):
@@ -101,6 +107,19 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> User
         if user.failed_login_count >= MAX_FAILED_LOGINS:
             user.locked_until = now + timedelta(minutes=LOCKOUT_MINUTES)
             user.failed_login_count = 0
+            log.warning(
+                "%s locked for %d minutes after %d failed attempts",
+                user.handle,
+                LOCKOUT_MINUTES,
+                MAX_FAILED_LOGINS,
+            )
+        else:
+            log.info(
+                "login failed: wrong password for %s (attempt %d of %d)",
+                user.handle,
+                user.failed_login_count,
+                MAX_FAILED_LOGINS,
+            )
         raise invalid
 
     if security.needs_rehash(user.password_hash):
@@ -108,6 +127,7 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> User
     user.failed_login_count = 0
     user.locked_until = None
     user.last_login_at = now
+    log.info("signed in: %s", user.handle)
     return user
 
 
@@ -153,6 +173,10 @@ async def rotate_refresh_token(
 
     now = datetime.now(UTC)
     if row.revoked_at is not None:
+        log.warning(
+            "refresh token reuse detected for user %s: revoking every session they have",
+            row.user_id,
+        )
         await revoke_all_for_user(session, row.user_id, reason="reuse_detected")
         raise AuthError("Your session was ended for security reasons. Please sign in again.", status_code=401)
     if row.expires_at <= now:

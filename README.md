@@ -160,6 +160,30 @@ app. Useful on a machine where you'd rather not install Postgres.
 | `make provision` | create buckets, Pub/Sub topics and subscriptions, AI models |
 | `make clean` | remove `.venv`, `node_modules` and build output |
 
+## Logging
+
+`LOG_LEVEL` in `.env` decides how much the API says. The log answers *why*, not just
+*what* — a 401 names the missing cookie and the endpoint that refreshes it, a failed login
+distinguishes an unknown address from a wrong password (while the response stays
+identical), and uploads log the object they are writing.
+
+```
+18:16:30 INFO  knowhub.request  [7394ea6d tarun.nagula14] POST /api/v1/videos/upload -> 201 in 1034ms
+18:16:30 INFO  knowhub.auth     [236d147f anonymous] 401: this endpoint needs an account and the
+                                request had no valid session (missing or expired knowhub_access cookie)…
+```
+
+Every request gets an id, returned as the `x-request-id` header and printed on every line
+it produced, so one line leads to the rest of that request. An id arriving from a proxy is
+kept, so a trace spans both.
+
+| Setting | Effect |
+|---|---|
+| `LOG_LEVEL=INFO` | one line per request, plus decisions worth knowing about (default) |
+| `LOG_LEVEL=DEBUG` | adds query strings, storage operations, and why a token was rejected |
+| `LOG_FORMAT=json` | one JSON object per line, for Cloud Logging |
+| `SQL_ECHO=true` | every statement SQLAlchemy runs — enormous, so opt in |
+
 ## How it fits together
 
 ```

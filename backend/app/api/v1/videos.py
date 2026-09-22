@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated
@@ -31,6 +32,7 @@ from app.schemas.video import LinkIn, SnippetIn, VideoOut, VideoPage, VideoUpdat
 from app.services import video as video_service
 
 router = APIRouter(tags=["videos"])
+log = logging.getLogger("knowhub.video")
 
 ALLOWED_MIME_PREFIX = "video/"
 UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024  # 8 MB: a multiple of 256 KiB, as GCS requires
@@ -126,10 +128,19 @@ async def start_upload(
             storage.resumable_session, object_name, data.content_type, data.size, origin
         )
     except Exception as exc:
+        log.exception("could not open a resumable session for %s (origin %s)", object_name, origin)
         raise HTTPException(
             status_code=502, detail={"message": "Could not start the upload. Please try again."}
         ) from exc
 
+    log.info(
+        "upload started: video=%s %s %.1f MB -> gs://%s/%s",
+        video.id,
+        data.content_type,
+        data.size / 1024**2,
+        settings.gcs_bucket,
+        object_name,
+    )
     video.raw_gcs_path = object_name
     if team is not None and user.team_id is None:
         # first upload tells us which team this person is in; the form defaults to it next time
@@ -165,6 +176,10 @@ async def complete_upload(
 
     stat = await asyncio.to_thread(storage.stat, video.raw_gcs_path or "")
     if stat is None:
+        log.error(
+            "upload finished but %s is not in the bucket: the browser's PUTs did not complete",
+            video.raw_gcs_path,
+        )
         video.status = "FAILED"
         video.processing_error = "file missing from storage after upload"
         video_service.record_event(session, video, user.id, "failed", reason="missing object")
@@ -180,6 +195,7 @@ async def complete_upload(
     video_service.record_event(session, video, user.id, "uploaded", bytes=size)
     video_service.record_event(session, video, user.id, "published")
     await session.commit()
+    log.info("upload complete: video=%s %.1f MB, now READY", video.id, size / 1024**2)
 
     data = await video_service.get_video(session, video.id, user)
     return VideoOut.model_validate(data)
@@ -374,6 +390,7 @@ async def delete_video(
         raise _fail(exc) from exc
     await session.commit()
 
+    log.info("video %s deleted by %s, removing %d object(s)", video_id, user.handle, len(objects))
     for object_name in objects:
         # the video is already gone from the UI; a leftover object isn't worth an error
         with contextlib.suppress(Exception):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from functools import lru_cache
 from typing import BinaryIO, Protocol
@@ -10,6 +11,8 @@ from google.auth.credentials import AnonymousCredentials
 from google.cloud import storage
 
 from app.core.config import Settings, get_settings
+
+log = logging.getLogger("knowhub.storage")
 
 DOWNLOAD_CHUNK_BYTES = 1024 * 1024
 
@@ -47,6 +50,7 @@ class GcsStorage:
         blob = self._bucket.blob(object_name)
         blob.upload_from_file(stream, content_type=content_type, rewind=True)
         blob.reload()
+        log.debug("uploaded %s (%s, %s bytes)", object_name, content_type, blob.size)
         return blob.size or 0
 
     def resumable_session(self, object_name: str, content_type: str, size: int, origin: str) -> str:
