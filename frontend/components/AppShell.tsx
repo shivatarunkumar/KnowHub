@@ -3,6 +3,7 @@
 import { type ReactNode, useState } from "react";
 import type { Topic } from "@/lib/api";
 import type { SessionUser } from "@/lib/session";
+import type { Theme } from "@/lib/theme";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -11,10 +12,12 @@ import { TopBar } from "./TopBar";
 export function AppShell({
   topics,
   user,
+  theme,
   children,
 }: {
   topics: Topic[];
   user: SessionUser | null;
+  theme: Theme;
   children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(true);
@@ -27,7 +30,7 @@ export function AppShell({
 
   return (
     <>
-      <TopBar onMenu={toggle} user={user} />
+      <TopBar onMenu={toggle} user={user} theme={theme} />
 
       <aside
         className={`fixed bottom-0 left-0 top-14 z-30 hidden overflow-y-auto bg-bg lg:block ${

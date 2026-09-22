@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { type Theme, applyTheme, rememberTheme } from "@/lib/theme";
 import { AutoThemeIcon, CheckIcon, MoonIcon, SunIcon } from "./icons";
-
-export const THEME_STORAGE_KEY = "knowhub-theme";
-
-type Theme = "light" | "dark" | "system";
 
 const OPTIONS: { value: Theme; label: string; hint: string; icon: typeof SunIcon }[] = [
   { value: "light", label: "Light", hint: "Always the light palette", icon: SunIcon },
@@ -13,44 +10,24 @@ const OPTIONS: { value: Theme; label: string; hint: string; icon: typeof SunIcon
   { value: "system", label: "Auto", hint: "Follow this device's setting", icon: AutoThemeIcon },
 ];
 
-/** What the page is showing right now, which for "system" depends on the OS. */
-function resolved(theme: Theme): "light" | "dark" {
-  if (theme !== "system") return theme;
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function apply(theme: Theme) {
-  const root = document.documentElement;
-  // no attribute at all means "follow the OS", which is what the CSS keys off
-  if (theme === "system") root.removeAttribute("data-theme");
-  else root.setAttribute("data-theme", theme);
-  try {
-    if (theme === "system") localStorage.removeItem(THEME_STORAGE_KEY);
-    else localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {
-    // private window, or storage blocked: the choice just won't outlive this page
-  }
-}
-
-export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system");
+/**
+ * Light / Dark / Auto. The current choice comes from the server (a cookie, rendered onto
+ * <html>), so the first paint is already correct and this component only has to change it.
+ */
+export function ThemeToggle({ theme: initial }: { theme: Theme }) {
+  const [theme, setTheme] = useState<Theme>(initial);
   const [open, setOpen] = useState(false);
-  const [ready, setReady] = useState(false);
+  // what is actually on screen: for Auto that depends on the device, which only the
+  // browser knows, so the icon settles after mount rather than guessing during render
+  const [systemDark, setSystemDark] = useState<boolean | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // read the saved choice after mount: the server has no way to know it, and the inline
-  // script in the layout has already applied it, so this only syncs the button
   useEffect(() => {
-    let saved: Theme = "system";
-    try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      if (stored === "light" || stored === "dark") saved = stored;
-    } catch {
-      /* storage blocked: stay on system */
-    }
-    setTheme(saved);
-    setReady(true);
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    setSystemDark(query.matches);
+    const onChange = (event: MediaQueryListEvent) => setSystemDark(event.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
   }, []);
 
   useEffect(() => {
@@ -70,13 +47,14 @@ export function ThemeToggle() {
   }, [open]);
 
   function choose(next: Theme) {
-    apply(next);
+    applyTheme(next); // instant
+    rememberTheme(next); // and on every later page load, from the server
     setTheme(next);
     setOpen(false);
   }
 
-  // until the saved choice is read, show the neutral icon rather than guessing wrong
-  const Icon = !ready ? AutoThemeIcon : resolved(theme) === "dark" ? MoonIcon : SunIcon;
+  const showing = theme === "system" ? (systemDark ? "dark" : "light") : theme;
+  const Icon = theme === "system" && systemDark === null ? AutoThemeIcon : showing === "dark" ? MoonIcon : SunIcon;
   const current = OPTIONS.find((option) => option.value === theme);
 
   return (

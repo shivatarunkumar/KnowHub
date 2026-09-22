@@ -4,11 +4,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import type { SessionUser } from "@/lib/session";
+import type { Theme } from "@/lib/theme";
 import { AccountMenu } from "./AccountMenu";
 import { ThemeToggle } from "./ThemeToggle";
 import { LogoMark, MenuIcon, SearchIcon } from "./icons";
 
-export function TopBar({ onMenu, user }: { onMenu: () => void; user: SessionUser | null }) {
+export function TopBar({
+  onMenu,
+  user,
+  theme,
+}: {
+  onMenu: () => void;
+  user: SessionUser | null;
+  theme: Theme;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
 
@@ -53,7 +62,7 @@ export function TopBar({ onMenu, user }: { onMenu: () => void; user: SessionUser
       </form>
 
       <div className="flex items-center gap-1">
-        <ThemeToggle />
+        <ThemeToggle theme={theme} />
         <AccountMenu user={user} />
       </div>
     </header>

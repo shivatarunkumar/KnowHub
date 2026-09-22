@@ -24,7 +24,7 @@ file is the single source of truth. This README is only about running the thing.
 | **Engagement** | Like, dislike, comment with one level of replies, like comments, edit your comment for a minute, `@mention` colleagues, share inside KnowHub (no Slack, no email) |
 | **Your channel** | `/channel/{handle}`: your uploads with a Manage dialog per video — edit the wording, change who can watch (everyone / link only / specific people / only you), turn comments off, or delete it |
 | **Audit** | Every upload and every later change is appended to `upload_events` |
-| **Appearance** | Light, Dark or Auto (follows the device), chosen in the top bar and remembered per browser |
+| **Appearance** | Light, Dark or Auto (follows the device), chosen in the top bar; the choice is a cookie, so the server renders the right palette from the first byte |
 | **About page** | `/about` explains the project and diagrams the upload, login and engagement flows for anyone opening KnowHub for the first time |
 
 Not built yet: transcoding to HLS, the in-browser trim/crop editor, search, the shorts feed,
