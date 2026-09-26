@@ -1,0 +1,52 @@
+{
+  "description": "Code snippets viewers can copy.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "video_id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "title",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "language",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "'text'"
+    },
+    {
+      "name": "code",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "sort_order",
+      "type": "INT64",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "0"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

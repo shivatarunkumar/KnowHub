@@ -1,0 +1,70 @@
+{
+  "description": "Comments with one level of replies. like_count is computed from comment_reactions.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "video_id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "parent_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ comments.id"
+    },
+    {
+      "name": "body",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "is_pinned",
+      "type": "BOOL",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "FALSE"
+    },
+    {
+      "name": "edited_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "deleted_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "description": "set by the API on every update (Postgres uses a trigger)",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "description": "In-app shares; the recipient also gets a notification.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "to_user_id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "from_user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "to_user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "message",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "at_seconds",
+      "type": "INT64",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

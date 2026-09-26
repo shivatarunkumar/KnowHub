@@ -1,0 +1,58 @@
+{
+  "description": "Playlists; Watch Later is a system playlist (system_kind = 'watch_later').",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "owner_id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "owner_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "title",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "description",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "visibility",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "'private'"
+    },
+    {
+      "name": "system_kind",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "description": "set by the API on every update (Postgres uses a trigger)",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

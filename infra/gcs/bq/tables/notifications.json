@@ -1,0 +1,65 @@
+{
+  "description": "The in-app notification inbox.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "user_id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "type",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "new_video_topic | new_video_channel | comment_reply | comment_mention | video_shared | video_ready | video_failed"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "actor_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ users.id"
+    },
+    {
+      "name": "topic_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ topics.id"
+    },
+    {
+      "name": "payload",
+      "type": "JSON",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "JSON '{}'"
+    },
+    {
+      "name": "read_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

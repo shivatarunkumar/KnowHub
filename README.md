@@ -12,6 +12,10 @@ AI writing assist. GCP deployment is a config switch, not a rewrite (§3.8 of
 **The plan, architecture, data model and roadmap live in [project.md](project.md)** — that
 file is the single source of truth. This README is only about running the thing.
 
+**Postgres or BigQuery:** `RUN_ON=PSQL` (default) or `RUN_ON=BQ` in `.env`. On BigQuery, run
+`make setup-bq` once instead of `make db-init`; `make api` then starts the BigQuery API,
+which has the same endpoints. Files stay in GCS either way. See [project-bq.md](project-bq.md).
+
 ## What works today
 
 | Area | What you can do |
@@ -154,8 +158,11 @@ app. Useful on a machine where you'd rather not install Postgres.
 | `make install` | install every dependency (backend, database/infra tools, frontend) |
 | `make db-init` / `make db-reset` | create or rebuild the database |
 | `make db-status` / `make db-shell` | list migrations / open psql |
-| `make api` / `make web` | run the API / the web app |
+| `make api` / `make web` | run the API `RUN_ON` names / the web app |
+| `make setup-bq` | BigQuery: create the dataset and every table with Terraform, then seed (idempotent) |
+| `make api-bq` / `make api-psql` | run the BigQuery or the Postgres API regardless of `RUN_ON` |
 | `make test` | backend + database tests and the frontend type check |
+| `make test-bq` | the BigQuery API against real BigQuery, in a throwaway dataset |
 | `make lint` | ruff lint and format check |
 | `make up` / `make down` / `make logs` | the Docker stack |
 | `make provision` | create buckets, Pub/Sub topics and subscriptions, AI models |
@@ -224,15 +231,18 @@ same code.
 | `project.md` | the plan: product, architecture, data model, API, roadmap |
 | `frontend/` | Next.js app (App Router, Tailwind v4): `/`, `/watch/[id]`, `/upload`, `/channel/[handle]`, `/login`, `/register` |
 | `backend/` | FastAPI app. Every setting is in `backend/app/core/config.py` |
+| `backend-bq/` | the same API on BigQuery (`RUN_ON=BQ`); shares config, security, storage and AI with `backend/` |
 | `database/` | `init_db.sql`, migrations, seeds and the setup script ([README](database/README.md)) |
 | `infra/` | provisioning scripts and the [inventory of GCP resources](infra/GCP_RESOURCES.md) ([README](infra/README.md)) |
+| `infra/gcs/bq/` | BigQuery tables (`tables/*.json`), `main.tf` and `setup_bq.py` |
 | `scripts/` | `bootstrap.sh` (Docker setup), `localenv.sh` (loads `.env` for host commands) |
 | `.env.example` | every configuration key, documented |
 
 ## Tests
 
 ```bash
-make test   # 65 backend tests, 10 database tests, frontend type check
+make test      # backend, BigQuery-backend (offline), database tests, frontend type check
+make test-bq   # the BigQuery API against real BigQuery (needs GCP credentials)
 make lint
 ```
 

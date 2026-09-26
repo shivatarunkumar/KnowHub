@@ -6,6 +6,9 @@
 #   make api        run the API          make web    run the web app
 #   make            list every command
 #
+# RUN_ON in .env picks the database: PSQL (default) or BQ. On BigQuery, run
+# `make setup-bq` once instead of `make db-init`; `make api` then starts backend-bq/.
+#
 # Python packages go into a local .venv, so nothing is installed system-wide.
 
 SHELL  := /bin/bash
@@ -19,8 +22,8 @@ ARGS   ?=
 
 .DEFAULT_GOAL := help
 .PHONY: help check check-db check-gcp check-all install install-python install-web setup \
-        db-init db-reset db-status db-shell api web test lint bootstrap up down logs ps \
-        provision dump-schema clean
+        db-init db-reset db-status db-shell api api-psql api-bq setup-bq web test test-bq lint \
+        bootstrap up down logs ps provision dump-schema clean
 
 help:  ## list every command
 	@echo "KnowHub commands:"
@@ -50,7 +53,8 @@ install: check install-python install-web  ## install all dependencies (backend 
 install-python: | $(VENV)  ## backend + database/infra Python packages into .venv
 	@echo "==> installing Python packages into $(VENV)"
 	@$(PIP) install --quiet --upgrade pip
-	@$(PIP) install --quiet -r backend/requirements-dev.txt -r infra/tools/requirements.txt
+	@$(PIP) install --quiet -r backend/requirements-dev.txt -r backend-bq/requirements.txt \
+	  -r infra/tools/requirements.txt
 	@echo "    $$($(PY) -V), $$($(PIP) list --format=freeze | wc -l | tr -d ' ') packages"
 
 install-web:  ## frontend npm packages
@@ -88,10 +92,27 @@ check-gcp: | $(VENV)  ## verify GCP: credentials, network, bucket, Pub/Sub topic
 
 check-all: check check-db check-gcp  ## run every check: tools, database, GCP
 
+# ---------------------------------------------------------------- bigquery (RUN_ON=BQ)
+setup-bq: | $(VENV)  ## BigQuery: create the dataset + every table (Terraform) and seed them (idempotent)
+	@source scripts/localenv.sh && $(PY) infra/gcs/bq/setup_bq.py $(ARGS)
+
 # ---------------------------------------------------------------- run
-api: | $(VENV)  ## run the API at http://localhost:8000 (reloads on change)
+api: | $(VENV)  ## run the API RUN_ON names (PSQL or BQ) at http://localhost:8000
+	@source scripts/localenv.sh && run_on=$$(echo "$${RUN_ON:-PSQL}" | tr '[:lower:]' '[:upper:]'); \
+	case "$$run_on" in \
+	  BQ|BIGQUERY) $(MAKE) --no-print-directory api-bq ;; \
+	  PSQL|POSTGRES|POSTGRESQL) $(MAKE) --no-print-directory api-psql ;; \
+	  *) echo "RUN_ON=$$RUN_ON in .env: use PSQL or BQ" >&2; exit 1 ;; \
+	esac
+
+api-psql: | $(VENV)  ## run the Postgres API (backend/) at http://localhost:8000
 	@source scripts/localenv.sh && cd backend && \
 	  ../$(VENV)/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port $${API_HOST_PORT:-8000}
+
+api-bq: | $(VENV)  ## run the BigQuery API (backend-bq/) at http://localhost:8000
+	@source scripts/localenv.sh && cd backend-bq && PYTHONPATH=.:../backend \
+	  ../$(VENV)/bin/uvicorn app_bq.main:app --reload --reload-dir . --reload-dir ../backend/app \
+	  --host 0.0.0.0 --port $${API_HOST_PORT:-8000}
 
 web:  ## run the web app at http://localhost:3000
 	@source scripts/localenv.sh && cd frontend && \
@@ -100,8 +121,12 @@ web:  ## run the web app at http://localhost:3000
 # ---------------------------------------------------------------- quality
 test: | $(VENV)  ## run backend + database tests and the frontend type check
 	@source scripts/localenv.sh && cd backend && ../$(VENV)/bin/pytest -q
+	@source scripts/localenv.sh && cd backend-bq && ../$(VENV)/bin/pytest -q
 	@source scripts/localenv.sh && TEST_POSTGRES_ADMIN_URL="$$POSTGRES_ADMIN_URL" $(VENV)/bin/pytest -q database/tests
 	@cd frontend && npm run typecheck
+
+test-bq: | $(VENV)  ## run the BigQuery API tests against real BigQuery (throwaway dataset)
+	@source scripts/localenv.sh && cd backend-bq && KNOWHUB_TEST_BQ=1 ../$(VENV)/bin/pytest -q $(ARGS)
 
 lint: | $(VENV)  ## ruff lint + format check
 	@$(VENV)/bin/ruff check . && $(VENV)/bin/ruff format --check .

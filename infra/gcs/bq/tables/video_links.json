@@ -1,0 +1,46 @@
+{
+  "description": "Links shown under a video.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "video_id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "kind",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "incident | jira | repo | pr | doc | confluence | other"
+    },
+    {
+      "name": "url",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "label",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

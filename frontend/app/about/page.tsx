@@ -268,7 +268,7 @@ export default function AboutPage() {
 const STACK: [string, string, string][] = [
   ["Frontend", "Next.js 16, React 19, TypeScript, Tailwind CSS", "Server-rendered pages, fast first load"],
   ["Backend", "Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0 async", "Typed, async, OpenAPI docs for free"],
-  ["Database", "PostgreSQL 17 with pg_trgm and pgvector", "Relational data, full-text search, and embeddings later"],
+  ["Database", "PostgreSQL 17 with pg_trgm and pgvector, or BigQuery", "One setting (RUN_ON) picks either; the API is the same"],
   ["Migrations", "Plain versioned SQL + a Python runner", "DDL stays readable and tool-independent"],
   ["Auth", "argon2id, PyJWT, httpOnly cookies", "Standard, and safe against database theft"],
   ["Storage", "Google Cloud Storage, resumable uploads", "Multi-GB files without passing through the API"],

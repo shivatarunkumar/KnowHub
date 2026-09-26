@@ -1,0 +1,167 @@
+{
+  "description": "Videos and shorts. view/like/comment counts are computed on read in BigQuery.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "owner_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "type",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "video | short"
+    },
+    {
+      "name": "title",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "description",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "category",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "bug_fix | incident_resolution | how_to | knowledge_share | demo | reusable_component"
+    },
+    {
+      "name": "primary_topic_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ topics.id"
+    },
+    {
+      "name": "visibility",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "internal | unlisted | restricted | private",
+      "defaultValueExpression": "'internal'"
+    },
+    {
+      "name": "status",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "DRAFT | UPLOADING | PROCESSING | READY | FAILED",
+      "defaultValueExpression": "'UPLOADING'"
+    },
+    {
+      "name": "environment",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "severity",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "original_filename",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "mime_type",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "raw_gcs_path",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "hls_path",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "thumbnail_path",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "duration_sec",
+      "type": "INT64",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "width",
+      "type": "INT64",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "height",
+      "type": "INT64",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "size_bytes",
+      "type": "INT64",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "processing_error",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "published_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "deleted_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE",
+      "description": "soft delete"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "description": "set by the API on every update (Postgres uses a trigger)",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "current_edit_version",
+      "type": "INT64",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "comments_enabled",
+      "type": "BOOL",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "TRUE"
+    },
+    {
+      "name": "team_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ teams.id"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "description": "Audit trail: who uploaded what, when, and every change after that.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "video_id"
+  ],
+  "time_partitioning": {
+    "type": "MONTH",
+    "field": "created_at"
+  },
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ users.id"
+    },
+    {
+      "name": "event",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "initiated | uploaded | processing | ready | failed | published | edited | visibility_changed | comments_changed | deleted"
+    },
+    {
+      "name": "metadata",
+      "type": "JSON",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "JSON '{}'"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

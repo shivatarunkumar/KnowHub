@@ -1,0 +1,24 @@
+{
+  "description": "Additional topics beyond videos.primary_topic_id.",
+  "primary_key": [
+    "video_id",
+    "topic_id"
+  ],
+  "clustering": [
+    "video_id"
+  ],
+  "schema": [
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "topic_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ topics.id"
+    }
+  ]
+}

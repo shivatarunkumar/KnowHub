@@ -1,0 +1,30 @@
+{
+  "description": "Likes on comments.",
+  "primary_key": [
+    "user_id",
+    "comment_id"
+  ],
+  "clustering": [
+    "comment_id"
+  ],
+  "schema": [
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "comment_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ comments.id"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "description": "Tell me when this person publishes. Subscriber counts are computed from here.",
+  "primary_key": [
+    "subscriber_id",
+    "channel_user_id"
+  ],
+  "clustering": [
+    "channel_user_id"
+  ],
+  "schema": [
+    {
+      "name": "subscriber_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "channel_user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "notify",
+      "type": "BOOL",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "TRUE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

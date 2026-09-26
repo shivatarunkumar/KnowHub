@@ -1,0 +1,4 @@
+# backend-bq shares backend/'s code (config, security, storage, AI, schemas), so it needs
+# everything backend needs, plus the BigQuery client.
+-r ../backend/requirements.txt
+google-cloud-bigquery==3.42.0

@@ -1,0 +1,12 @@
+[project]
+name = "knowhub-api-bq"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# app_bq imports the shared code from backend/ (package `app`)
+pythonpath = [".", "../backend"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["bigquery: runs against real BigQuery in a throwaway dataset (make test-bq)"]

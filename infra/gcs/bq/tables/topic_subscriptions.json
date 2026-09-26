@@ -1,0 +1,36 @@
+{
+  "description": "Tell me when a video on this topic is published.",
+  "primary_key": [
+    "user_id",
+    "topic_id"
+  ],
+  "clustering": [
+    "topic_id"
+  ],
+  "schema": [
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "topic_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ topics.id"
+    },
+    {
+      "name": "notify",
+      "type": "BOOL",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "TRUE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

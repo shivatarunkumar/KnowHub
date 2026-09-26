@@ -60,8 +60,16 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
 
     # --- database ---
+    # Which database the whole app runs on. PSQL → backend/ (Postgres at DATABASE_URL);
+    # BQ → backend-bq/ (the BQ_DB_* dataset). Same endpoints either way; see project-bq.md.
+    run_on: Literal["PSQL", "BQ"] = "PSQL"
     database_url: str = "postgresql+asyncpg://knowhub:knowhub@postgres:5432/knowhub"
     db_pool_size: int = 5
+    # BigQuery as the application database (RUN_ON=BQ). Separate from BQ_DATASET below,
+    # which is the analytics sink. Empty project → GCP_PROJECT_ID.
+    bq_db_project: str = ""
+    bq_db_dataset: str = "knowhub"
+    bq_db_location: str = "europe-west2"
 
     # --- auth ---
     jwt_secret: str = INSECURE_JWT_SECRET
@@ -128,6 +136,19 @@ class Settings(BaseSettings):
     def _uppercase_level(cls, value: str) -> str:
         """LOG_LEVEL=debug and LOG_LEVEL=DEBUG mean the same thing."""
         return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("run_on", mode="before")
+    @classmethod
+    def _uppercase_run_on(cls, value: str) -> str:
+        """RUN_ON=bq, BQ, psql, postgres all work."""
+        if not isinstance(value, str):
+            return value
+        value = value.strip().upper()
+        return {"POSTGRES": "PSQL", "POSTGRESQL": "PSQL", "BIGQUERY": "BQ"}.get(value, value)
+
+    @property
+    def bq_db_project_id(self) -> str:
+        return self.bq_db_project.strip() or self.gcp_project_id
 
     @field_validator("provider", mode="before")
     @classmethod

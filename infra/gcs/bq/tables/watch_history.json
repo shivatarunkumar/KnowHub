@@ -1,0 +1,48 @@
+{
+  "description": "Resume position and the History page, one row per user per video.",
+  "primary_key": [
+    "user_id",
+    "video_id"
+  ],
+  "clustering": [
+    "user_id"
+  ],
+  "schema": [
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "last_position_sec",
+      "type": "INT64",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "0"
+    },
+    {
+      "name": "watch_count",
+      "type": "INT64",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "1"
+    },
+    {
+      "name": "completed",
+      "type": "BOOL",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "FALSE"
+    },
+    {
+      "name": "watched_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

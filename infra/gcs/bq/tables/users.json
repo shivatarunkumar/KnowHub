@@ -1,0 +1,121 @@
+{
+  "description": "People; each user is also a channel. email and handle are unique (enforced by the API).",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "email",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "lowercase, unique"
+    },
+    {
+      "name": "email_verified_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "password_hash",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "argon2id; never plaintext"
+    },
+    {
+      "name": "password_changed_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "display_name",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "handle",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "channel handle, lowercase, 3-30 chars, unique"
+    },
+    {
+      "name": "avatar_url",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "banner_url",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "bio",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "role",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "user | admin",
+      "defaultValueExpression": "'user'"
+    },
+    {
+      "name": "is_active",
+      "type": "BOOL",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "TRUE"
+    },
+    {
+      "name": "last_login_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "failed_login_count",
+      "type": "INT64",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "0"
+    },
+    {
+      "name": "locked_until",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "deleted_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE",
+      "description": "soft delete"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "description": "set by the API on every update (Postgres uses a trigger)",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "team_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ teams.id"
+    }
+  ]
+}

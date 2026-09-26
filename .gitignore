@@ -227,3 +227,10 @@ frontend/next-env.d.ts
 *.tsbuildinfo
 .venv/
 .env.gcp
+
+# Terraform (infra/gcs/bq): state stays local, make setup-bq rebuilds it on a new machine.
+# .terraform.lock.hcl IS committed, so every machine uses the same provider version.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan

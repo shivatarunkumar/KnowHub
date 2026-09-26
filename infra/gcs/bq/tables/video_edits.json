@@ -1,0 +1,76 @@
+{
+  "description": "Non-destructive edit lists, one version per re-edit.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "video_id"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "version",
+      "type": "INT64",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "edit_list",
+      "type": "JSON",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "JSON '{}'"
+    },
+    {
+      "name": "status",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "draft | processing | applied | failed",
+      "defaultValueExpression": "'draft'"
+    },
+    {
+      "name": "error",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "output_path",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_by",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ users.id"
+    },
+    {
+      "name": "applied_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "description": "set by the API on every update (Postgres uses a trigger)",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

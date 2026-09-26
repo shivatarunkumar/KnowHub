@@ -1,0 +1,63 @@
+{
+  "description": "View, watch-time and engagement events. Video view counts are counted from here.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "event_type",
+    "video_id"
+  ],
+  "time_partitioning": {
+    "type": "DAY",
+    "field": "occurred_at"
+  },
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID (a bigint identity in Postgres)",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "event_type",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "video_view | video_progress | video_complete | video_like | video_share | search | ai_enhance"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "UUID"
+    },
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "null for anonymous viewers"
+    },
+    {
+      "name": "session_id",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "position_sec",
+      "type": "INT64",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "payload",
+      "type": "JSON",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "JSON '{}'"
+    },
+    {
+      "name": "occurred_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

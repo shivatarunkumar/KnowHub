@@ -1,5 +1,7 @@
 # KnowHub — Project Plan & Architecture
-_Living document. Status: v0.5 · Phases 0–3 built, Phase 5 mostly built · Last updated: 2026-09-21_
+_Living document. Status: v0.6 · Phases 0–3 built, Phase 5 mostly built, runs on Postgres or BigQuery · Last updated: 2026-09-26_
+
+> **Two databases, one app.** `RUN_ON=PSQL|BQ` in `.env` picks Postgres (`backend/`, this document) or BigQuery (`backend-bq/`, see **[project-bq.md](project-bq.md)**). Both expose the same endpoints; files stay in GCS either way; every feature is built on both.
 
 > **Current target: run everything locally.** Every feature (auth, upload, playback, search, engagement, notifications, AI writing help) must work on a laptop, set up by scripts with no manual steps: `make install` → `make db-init` → `make api` + `make web` on the host, or `./scripts/bootstrap.sh` for the full Docker stack. GCP deployment comes later and is a config switch, not a rewrite. See §1.1, §3.7, §3.8 and §3.10.
 
@@ -55,7 +57,7 @@ for what each phase covers.
 
 `/about` is the in-app explainer: what KnowHub is, why it exists, and diagrams of the architecture, the upload path into Cloud Storage, the login flow and the engagement tables. It is written from this document and must be updated with it.
 
-**Tests**: 65 backend, 10 database, plus the frontend type check (`make test`).
+**Tests**: 123 backend, 10 database, 97 BigQuery-backend (contract, table parity, data layer), plus the frontend type check (`make test`). `make test-bq` adds live tests against a throwaway BigQuery dataset.
 
 **Connection checks**: `make check-db` and `make check-gcp` verify Postgres and GCP
 (config → network → credentials → bucket read/write → topics) outside the API, each check
@@ -286,7 +288,7 @@ All settings live in **one typed config module**, `backend/app/core/config.py` (
 | Group | Keys (examples) | Local value | GCP value |
 |---|---|---|---|
 | app | `APP_ENV`, `API_BASE_URL`, `WEB_BASE_URL`, `CORS_ORIGINS` | `local`, `http://localhost:8000`, … | per env |
-| db | `DATABASE_URL` | `postgresql+asyncpg://knowhub:knowhub@postgres:5432/knowhub` | Cloud SQL connector |
+| db | `RUN_ON` (`PSQL`/`BQ`), `DATABASE_URL`, `BQ_DB_PROJECT`, `BQ_DB_DATASET`, `BQ_DB_LOCATION` | `PSQL`, `postgresql+asyncpg://knowhub:knowhub@postgres:5432/knowhub` | Cloud SQL connector, or BigQuery (project-bq.md) |
 | auth | `JWT_SECRET`, `ACCESS_TOKEN_TTL_MIN`, `REFRESH_TOKEN_TTL_DAYS` | dev secret | Secret Manager |
 | gcp | `GCP_PROJECT_ID`, `GCP_REGION`, `GOOGLE_APPLICATION_CREDENTIALS` | `knowhub-local`, `us-central1`, none | real project |
 | storage | `STORAGE_BACKEND` (`gcs`), `GCS_ENDPOINT_URL`, `GCS_RAW_BUCKET`, `GCS_MEDIA_BUCKET`, `SIGNED_URL_TTL_MIN`, `MEDIA_PUBLIC_BASE_URL` | `http://gcs:4443`, `knowhub-raw`, `knowhub-media` | empty endpoint, CDN URL |
@@ -501,6 +503,7 @@ Pagination is cursor-based. Errors use RFC 7807 problem JSON.
 ```
 KnowHub/
   project.md                 # this doc
+  project-bq.md              # running on BigQuery (RUN_ON=BQ)
   frontend/                  # Next.js app (App Router, Tailwind v4)
     app/   built:   /, /watch/[id], /upload, /channel/[handle], /login, /register
            planned: /shorts/[id], /results, /studio, /feed/subscriptions
@@ -522,8 +525,10 @@ KnowHub/
       workers/       # planned: media_worker.py, notify_worker.py, embed_worker.py
       scripts/       # reembed.py (app-level jobs only)
     tests/
+  backend-bq/                # the same API on BigQuery (app_bq/); imports the shared code from backend/
   database/                  # ALL database work: Postgres migrations/DDL, seeds, BigQuery DDL + queries, DB scripts (§3.10)
   infra/                     # provisioning scripts: GCS, Pub/Sub, BigQuery, GCP project setup, AI models (§3.10)
+    gcs/bq/                  # BigQuery app tables: tables/*.json, main.tf, setup_bq.py (make setup-bq)
   scripts/bootstrap.sh       # one command: new machine → running app
   Makefile                   # install, db-init, db-reset, db-status, api, web, test, lint, docker targets
   docker-compose.yml         # postgres(pgvector), fake-gcs, pubsub-emulator, ollama, init, api, workers, web
@@ -577,7 +582,7 @@ KnowHub/
 | 15 | Video editing during upload | **Decided:** yes. v1 = keep wanted time range(s) (trim/cut) + crop the frame + thumbnail pick. Non-destructive, applied server-side, re-editable later. Rotate/mute/blur later |
 | 16 | Editor UI: build our own timeline (HTML5 video + canvas), or use a library? Blur and captions editing in v1 or later? | Proposed: own lightweight timeline; blur/captions later ⚙️ |
 | 17 | Where does DB work live / how are environments set up? | **Decided:** all DB work (DDL/migrations, seeds, BigQuery DDL + queries, scripts) in `database/`. GCS/Pub/Sub/BigQuery/GCP setup by idempotent scripts in `infra/`. One `bootstrap.sh` per machine, no manual steps |
-| 18 | Migration tool: plain SQL + own runner, or an off-the-shelf tool (Flyway/dbmate)? Terraform later for GCP? | Proposed: plain SQL + `migrate.py`; scripts instead of Terraform for now ⚙️ |
+| 18 | Migration tool: plain SQL + own runner, or an off-the-shelf tool (Flyway/dbmate)? Terraform later for GCP? | Proposed: plain SQL + `migrate.py` for Postgres. **Decided:** Terraform for the BigQuery tables (`infra/gcs/bq`, project-bq.md); scripts for the rest ⚙️ |
 | 19 | Upload transport for big files (10 MB failures through the Next.js proxy) | **Decided:** the browser uploads straight to GCS with a resumable session in 8 MB chunks; the API only hands out the session URL |
 | 20 | Thumbnails without an FFmpeg dependency | **Decided:** capture the poster frame in the browser (`<video>` → `<canvas>` → JPEG) and upload it on publish; videos without one get a drawn cover |
 | 21 | Per-video privacy: what does "limit it to a few people" mean? | **Decided:** a fourth visibility, `restricted`, with an allow-list in `video_viewers`. `unlisted` stays link-only, `private` is owner-only (§2.5) |
@@ -585,3 +590,4 @@ KnowHub/
 | 23 | Deleting a video | **Decided:** soft delete (`deleted_at`) so the audit trail survives; the file and thumbnail are removed from storage |
 | 24 | Comment editing window | **Decided:** 60 s (`COMMENT_EDIT_WINDOW_SECONDS`), no countdown shown |
 | 25 | Where do creator controls live: a separate Studio, or the channel page? | **Decided:** the channel page is the management surface (§2.5). Studio stays for analytics later |
+| 26 | Can the app run on BigQuery instead of Postgres? | **Decided:** yes, `RUN_ON=PSQL\|BQ`. A separate API in `backend-bq/` with identical endpoints, tables in `bigquerytarun.knowhub` (europe-west2), counts computed on read. Details and trade-offs in [project-bq.md](project-bq.md) |

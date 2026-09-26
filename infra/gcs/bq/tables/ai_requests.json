@@ -1,0 +1,83 @@
+{
+  "description": "Usage and quality tracking for the writing assist.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "user_id"
+  ],
+  "time_partitioning": {
+    "type": "MONTH",
+    "field": "created_at"
+  },
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ users.id"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "field",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "title | description | tags | comment"
+    },
+    {
+      "name": "provider",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "model",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "input_chars",
+      "type": "INT64",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "0"
+    },
+    {
+      "name": "output_chars",
+      "type": "INT64",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "0"
+    },
+    {
+      "name": "latency_ms",
+      "type": "INT64",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "accepted",
+      "type": "BOOL",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "error",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

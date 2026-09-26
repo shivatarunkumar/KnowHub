@@ -1,0 +1,37 @@
+{
+  "description": "The allow-list behind visibility = 'restricted'.",
+  "primary_key": [
+    "video_id",
+    "user_id"
+  ],
+  "clustering": [
+    "video_id",
+    "user_id"
+  ],
+  "schema": [
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "added_by",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ users.id"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

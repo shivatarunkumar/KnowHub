@@ -1,0 +1,51 @@
+{
+  "description": "Title + description (+ topics, tags) embeddings for semantic search (VECTOR_SEARCH).",
+  "primary_key": [
+    "video_id"
+  ],
+  "clustering": [
+    "video_id"
+  ],
+  "schema": [
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "embedding",
+      "type": "FLOAT64",
+      "mode": "REPEATED",
+      "description": "AI_EMBEDDING_DIM floats (768)"
+    },
+    {
+      "name": "model",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "dim",
+      "type": "INT64",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "content_hash",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    },
+    {
+      "name": "updated_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "description": "set by the API on every update (Postgres uses a trigger)",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

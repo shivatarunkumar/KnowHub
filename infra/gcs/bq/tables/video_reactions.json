@@ -1,0 +1,37 @@
+{
+  "description": "+1 like / -1 dislike, one row per user per video.",
+  "primary_key": [
+    "user_id",
+    "video_id"
+  ],
+  "clustering": [
+    "video_id",
+    "user_id"
+  ],
+  "schema": [
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "value",
+      "type": "INT64",
+      "mode": "REQUIRED",
+      "description": "1 or -1"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

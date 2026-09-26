@@ -1,0 +1,73 @@
+{
+  "description": "Refresh tokens, stored hashed and rotated on every use.",
+  "primary_key": [
+    "id"
+  ],
+  "clustering": [
+    "token_hash"
+  ],
+  "schema": [
+    {
+      "name": "id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "UUID",
+      "defaultValueExpression": "GENERATE_UUID()"
+    },
+    {
+      "name": "user_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ users.id"
+    },
+    {
+      "name": "token_hash",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "SHA-256 of the token; unique"
+    },
+    {
+      "name": "expires_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "last_used_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "revoked_at",
+      "type": "TIMESTAMP",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "revoked_reason",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "rotated | logout | reuse_detected | password_reset | admin"
+    },
+    {
+      "name": "replaced_by",
+      "type": "STRING",
+      "mode": "NULLABLE",
+      "description": "→ refresh_tokens.id"
+    },
+    {
+      "name": "user_agent",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "ip",
+      "type": "STRING",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "created_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}

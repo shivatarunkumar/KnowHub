@@ -1,0 +1,35 @@
+{
+  "description": "Videos in a playlist, in order.",
+  "primary_key": [
+    "playlist_id",
+    "video_id"
+  ],
+  "clustering": [
+    "playlist_id"
+  ],
+  "schema": [
+    {
+      "name": "playlist_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ playlists.id"
+    },
+    {
+      "name": "video_id",
+      "type": "STRING",
+      "mode": "REQUIRED",
+      "description": "→ videos.id"
+    },
+    {
+      "name": "position",
+      "type": "INT64",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "added_at",
+      "type": "TIMESTAMP",
+      "mode": "REQUIRED",
+      "defaultValueExpression": "CURRENT_TIMESTAMP()"
+    }
+  ]
+}
