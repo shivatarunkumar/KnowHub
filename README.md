@@ -107,6 +107,45 @@ gcloud config set project <your-project>
 make db-init
 ```
 
+### Open it at http://knowhub-local.com instead of localhost:3000
+
+Optional. It gives the app a proper name on your machine. Nothing else changes: `localhost`
+and your other apps keep working, because the hosts line only adds a second name for
+127.0.0.1.
+
+1. **Point the name at your machine** (once per machine; this is the only step that needs sudo):
+
+   ```bash
+   sudo sh -c 'echo "127.0.0.1 knowhub-local.com" >> /etc/hosts'
+   dscacheutil -q host -a name knowhub-local.com   # should print 127.0.0.1
+   ```
+
+2. **Tell the app its address** in `.env`:
+
+   | Key | Set it to | Why |
+   |---|---|---|
+   | `WEB_HOST_PORT` | `80` | a URL without a port means port 80. macOS lets a normal user listen on it, so no sudo |
+   | `WEB_BASE_URL` | `http://knowhub-local.com` | password-reset links, and the hostname the dev server allows (`frontend/next.config.ts` reads it) |
+   | `CORS_ORIGINS` | `http://knowhub-local.com,http://localhost:3000` | the API accepts both |
+   | `GCS_CORS_ORIGINS` | `http://knowhub-local.com,http://localhost:3000` | the browser uploads straight to the bucket, which only accepts these origins |
+
+3. **Let the bucket accept uploads from the new origin.** The bucket is shared, so this is
+   needed only once per bucket, or whenever `GCS_CORS_ORIGINS` changes:
+
+   ```bash
+   bash -c 'source scripts/localenv.sh && .venv/bin/python infra/scripts/provision.py --target gcp --only gcs'
+   ```
+
+   Skip it and everything works except uploads, which fail in the browser with a CORS error.
+
+4. **Restart** `make api` and `make web`, then open http://knowhub-local.com. Sign in again
+   once: cookies set on `localhost` don't carry over to the new name.
+
+To undo, put the four `.env` keys back to their `localhost:3000` values and
+`WEB_HOST_PORT=3000`, and delete the line from `/etc/hosts`. If port 80 is taken on a
+machine, keep `WEB_HOST_PORT=3000` and use http://knowhub-local.com:3000, with that
+origin in both CORS keys.
+
 ### Check the connections before starting anything
 
 ```bash
