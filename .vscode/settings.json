@@ -1,0 +1,7 @@
+{
+  // logs/ is written by ./knowhub.sh (and git-ignored): keep it out of the explorer,
+  // search and the file watcher.
+  "files.exclude": { "logs/": true },
+  "search.exclude": { "logs/": true },
+  "files.watcherExclude": { "**/logs/**": true }
+}

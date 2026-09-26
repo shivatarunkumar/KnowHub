@@ -22,7 +22,8 @@ ARGS   ?=
 
 .DEFAULT_GOAL := help
 .PHONY: help check check-db check-gcp check-all install install-python install-web setup \
-        db-init db-reset db-status db-shell api api-psql api-bq setup-bq web test test-bq lint \
+        db-init db-reset db-status db-shell api api-psql api-bq setup-bq setup-gcp setup-local \
+        build-web web test test-bq lint \
         bootstrap up down logs ps provision dump-schema clean
 
 help:  ## list every command
@@ -30,25 +31,35 @@ help:  ## list every command
 	@grep -hE '^[a-z][a-z-]*:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-14s\033[0m %s\n", $$1, $$2}'
 
 # ---------------------------------------------------------------- setup
-check:  ## check the tools this project needs are installed
+# RUN_ON from .env (PSQL when there's no .env yet): decides which tools are needed
+RUN_ON_ENV := $(shell grep -E '^RUN_ON=' .env 2>/dev/null | tail -1 | cut -d= -f2 | tr '[:lower:]' '[:upper:]')
+
+check:  ## check the tools this project needs are installed (psql for PSQL, terraform for BQ)
 	@missing=0; \
-	for tool in $(PYTHON) node npm psql; do \
+	tools="$(PYTHON) node npm"; \
+	case "$(RUN_ON_ENV)" in BQ|BIGQUERY) tools="$$tools terraform gcloud" ;; *) tools="$$tools psql" ;; esac; \
+	for tool in $$tools; do \
 	  if command -v $$tool >/dev/null 2>&1; then \
-	    printf "  ok      %-8s %s\n" "$$tool" "$$($$tool --version 2>&1 | head -1)"; \
+	    printf "  ok      %-9s %s\n" "$$tool" "$$($$tool --version 2>&1 | head -1)"; \
 	  else \
-	    printf "  MISSING %-8s\n" "$$tool"; missing=1; \
+	    printf "  MISSING %-9s\n" "$$tool"; missing=1; \
 	  fi; \
 	done; \
 	if [ $$missing -eq 1 ]; then \
 	  echo; echo "Install what's missing:"; \
-	  echo "  python3 → brew install python@3.12"; \
-	  echo "  node/npm → brew install node"; \
-	  echo "  psql     → brew install libpq (or postgresql@16)"; \
+	  echo "  python3   → brew install python"; \
+	  echo "  node/npm  → brew install node"; \
+	  echo "  psql      → brew install postgresql@17"; \
+	  echo "  terraform → brew install terraform"; \
+	  echo "  gcloud    → brew install --cask gcloud-cli"; \
 	  exit 1; \
 	fi
 
 install: check install-python install-web  ## install all dependencies (backend + tools + frontend)
-	@echo "✔ dependencies installed. Next: make db-init"
+	@case "$(RUN_ON_ENV)" in \
+	  BQ|BIGQUERY) echo "✔ dependencies installed. Next: make setup-bq (or make setup-local, see LOCAL_RUN.md)" ;; \
+	  *) echo "✔ dependencies installed. Next: make db-init" ;; \
+	esac
 
 install-python: | $(VENV)  ## backend + database/infra Python packages into .venv
 	@echo "==> installing Python packages into $(VENV)"
@@ -67,6 +78,16 @@ $(VENV):
 	@$(PYTHON) -m venv $(VENV)
 
 setup: install db-init  ## install everything, then set up the database
+
+setup-local: install setup-gcp setup-bq build-web  ## one-time BigQuery setup: install, GCP resources, tables, web build (LOCAL_RUN.md)
+	@echo "✔ set up. Next: ./knowhub.sh start"
+
+setup-gcp: | $(VENV)  ## create/update the GCS bucket (with upload CORS) and Pub/Sub topics in GCP_PROJECT_ID
+	@source scripts/localenv.sh && $(PY) infra/scripts/provision.py --target gcp --only gcs,pubsub
+
+build-web:  ## build the web app for ./knowhub.sh (production mode); re-run after pulling new code
+	@source scripts/localenv.sh && cd frontend && \
+	  API_INTERNAL_URL=http://127.0.0.1:$${API_HOST_PORT:-8000} npm run build
 
 # ---------------------------------------------------------------- database
 db-init: | $(VENV)  ## create database, role, tables and seed data (idempotent)

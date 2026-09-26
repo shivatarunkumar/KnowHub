@@ -12,6 +12,10 @@ AI writing assist. GCP deployment is a config switch, not a rewrite (§3.8 of
 **The plan, architecture, data model and roadmap live in [project.md](project.md)** — that
 file is the single source of truth. This README is only about running the thing.
 
+**Just want it running on your Mac, all the time?** Follow [LOCAL_RUN.md](LOCAL_RUN.md):
+step by step, no developer knowledge needed. `./knowhub.sh` starts it, and cron keeps it up
+across restarts.
+
 **Postgres or BigQuery:** `RUN_ON=PSQL` (default) or `RUN_ON=BQ` in `.env`. On BigQuery, run
 `make setup-bq` once instead of `make db-init`; `make api` then starts the BigQuery API,
 which has the same endpoints. Files stay in GCS either way. See [project-bq.md](project-bq.md).
