@@ -23,27 +23,29 @@
   --bad: #b4342a;
 }
 
-/* Dark mode comes from the OS unless someone picks a theme: ThemeToggle sets
-   data-theme on <html>, and a small script in the layout applies the saved choice before
-   the first paint so the page never flashes the wrong palette.
+/* Dark mode comes from the OS unless someone picks a theme: the choice is a cookie, and
+   the server renders data-theme on <html> from it, so the first paint is already right.
+
+   Dark surfaces are neutral near-black with a trace of warmth (the cream of light mode,
+   at night); green is kept for what should stand out: buttons, links, active chips.
 
    The two rules below must hold the same tokens — one for "auto", one for "always dark". */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0b1a14;
-    --surface: #12271f;
-    --surface-hover: #1b352b;
-    --text: #e9f0ec;
-    --muted: #9db0a7;
-    --border: #1e382d;
+    --bg: #141413;
+    --surface: #1e1e1c;
+    --surface-hover: #2a2a27;
+    --text: #ecebe6;
+    --muted: #a3a29a;
+    --border: #2e2d2a;
     --brand: #6cc295;
     --brand-hover: #92d7b1;
-    --brand-contrast: #06140f;
+    --brand-contrast: #141413;
     --accent: #a4d44f;
-    --accent-contrast: #06140f;
-    --chip-active: #e9f0ec;
-    --chip-active-text: #0b1a14;
+    --accent-contrast: #141413;
+    --chip-active: #ecebe6;
+    --chip-active-text: #141413;
     --ok: #58c08a;
     --warn: #d8a34a;
     --bad: #e57a70;
@@ -52,19 +54,19 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b1a14;
-  --surface: #12271f;
-  --surface-hover: #1b352b;
-  --text: #e9f0ec;
-  --muted: #9db0a7;
-  --border: #1e382d;
+  --bg: #141413;
+  --surface: #1e1e1c;
+  --surface-hover: #2a2a27;
+  --text: #ecebe6;
+  --muted: #a3a29a;
+  --border: #2e2d2a;
   --brand: #6cc295;
   --brand-hover: #92d7b1;
-  --brand-contrast: #06140f;
+  --brand-contrast: #141413;
   --accent: #a4d44f;
-  --accent-contrast: #06140f;
-  --chip-active: #e9f0ec;
-  --chip-active-text: #0b1a14;
+  --accent-contrast: #141413;
+  --chip-active: #ecebe6;
+  --chip-active-text: #141413;
   --ok: #58c08a;
   --warn: #d8a34a;
   --bad: #e57a70;
