@@ -5,13 +5,13 @@ from __future__ import annotations
 
 import json
 import os
-from functools import lru_cache
 from typing import Any, Protocol
 
 from google.api_core import exceptions
 from google.cloud import pubsub_v1
 
 from app.core.config import Settings, get_settings
+from app.core.gcp_credentials import per_login
 
 
 class EventBus(Protocol):
@@ -43,6 +43,6 @@ class PubSubEventBus:
         return missing
 
 
-@lru_cache
+@per_login
 def get_event_bus() -> EventBus:
     return PubSubEventBus(get_settings())

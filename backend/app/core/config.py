@@ -80,6 +80,9 @@ class Settings(BaseSettings):
     # --- gcp ---
     gcp_project_id: str = "knowhub-local"
     gcp_region: str = "us-central1"
+    # "Reconnect Google Cloud" in the web app, for a Mac signed in with a person's account
+    # (services/gcloud_login.py). Off by itself on a service account or without gcloud.
+    gcloud_login_from_web: bool = True
 
     # --- storage ---
     storage_backend: Literal["gcs"] = "gcs"

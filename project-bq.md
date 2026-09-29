@@ -231,3 +231,4 @@ takes about a minute.
 | B7 | No multi-statement transactions; parallel per-table writes instead | a transaction costs 5–6 s; each statement is atomic |
 | B8 | DML only, never streaming inserts | streamed rows can't be updated or deleted for ~30 minutes |
 | B9 | Seeds read from the Postgres seed files | one list of topics and teams for both databases |
+| B10 | Google clients rebuild when the ADC file changes; a "Reconnect Google Cloud" button runs both `gcloud` logins from the web app | on a Mac signed in as a person, Google expires the sign-in; clients cached the dead refresh token, so a new login needed an API restart. The button is only offered to a browser on that Mac (`GCLOUD_LOGIN_FROM_WEB`, `services/gcloud_login.py`); remove it once KnowHub runs in a pod with a service account |

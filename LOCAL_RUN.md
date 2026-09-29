@@ -354,6 +354,7 @@ When KnowHub won't start, `logs/knowhub.log` (or the output of `./knowhub.sh sta
 | KnowHub doesn't come back after a restart | same as above; also check `./knowhub.sh status` says cron is *installed* (else `./knowhub.sh cron-install`) |
 | the page loads but uploads fail | the bucket doesn't allow uploads from the address you're using. Check `GCS_CORS_ORIGINS` in `.env` lists it (for example `http://localhost:3000`), then `make setup-gcp` |
 | signing in, liking or commenting takes about 2 seconds | normal on BigQuery: every save takes 1.5–2 s. Reading is fast |
+| a yellow **Reconnect Google Cloud** button at the top of the page | Google wants this Mac to sign in again (it does every so often). Click it, click **Sign in** on each of the two steps, choose your work account and click **Allow**. The page reloads when it's done; no restart needed. The button only appears in a browser on the Mac running KnowHub. The Terminal way still works too: step 4 |
 | every page is an error | open http://localhost:8000/api/v1/health: the item that isn't `ok` is the cause. Then `make check-gcp` explains it |
 | `make setup-local` fails with "permission denied" or "403" | your Google account is missing a role on the project ("Before you start") |
 | `make setup-local` fails on the bucket with "already exists" / "not available" | someone else owns that bucket name: choose another `GCS_BUCKET` (step 3) |

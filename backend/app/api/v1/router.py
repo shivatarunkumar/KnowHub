@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import ai, auth, channels, engagement, health, teams, topics, videos
+from app.api.v1 import ai, auth, channels, engagement, gcloud_login, health, teams, topics, videos
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router)
@@ -11,3 +11,4 @@ api_router.include_router(videos.router)
 api_router.include_router(channels.router)
 api_router.include_router(engagement.router)
 api_router.include_router(ai.router)
+api_router.include_router(gcloud_login.router)

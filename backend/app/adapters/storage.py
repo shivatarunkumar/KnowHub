@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Iterator
-from functools import lru_cache
 from typing import BinaryIO, Protocol
 
 from google.auth.credentials import AnonymousCredentials
 from google.cloud import storage
 
 from app.core.config import Settings, get_settings
+from app.core.gcp_credentials import per_login
 
 log = logging.getLogger("knowhub.storage")
 
@@ -126,6 +126,6 @@ class GcsStorage:
             log.debug("  gcs delete %s: already gone", object_name)
 
 
-@lru_cache
+@per_login
 def get_storage() -> StorageService:
     return GcsStorage(get_settings())

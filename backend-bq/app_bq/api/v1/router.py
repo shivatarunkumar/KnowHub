@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.api.v1 import gcloud_login
 from app_bq.api.v1 import ai, auth, channels, engagement, health, teams, topics, videos
 
 # The same routers, in the same order, as app/api/v1/router.py: the two APIs must
@@ -13,3 +14,4 @@ api_router.include_router(videos.router)
 api_router.include_router(channels.router)
 api_router.include_router(engagement.router)
 api_router.include_router(ai.router)
+api_router.include_router(gcloud_login.router)

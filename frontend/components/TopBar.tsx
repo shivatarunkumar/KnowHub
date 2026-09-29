@@ -6,6 +6,7 @@ import { type FormEvent, useState } from "react";
 import type { SessionUser } from "@/lib/session";
 import type { Theme } from "@/lib/theme";
 import { AccountMenu } from "./AccountMenu";
+import { GcloudReconnect } from "./GcloudReconnect";
 import { ThemeToggle } from "./ThemeToggle";
 import { LogoMark, MenuIcon, SearchIcon } from "./icons";
 
@@ -62,6 +63,7 @@ export function TopBar({
       </form>
 
       <div className="flex items-center gap-1">
+        <GcloudReconnect />
         <ThemeToggle theme={theme} />
         <AccountMenu user={user} />
       </div>

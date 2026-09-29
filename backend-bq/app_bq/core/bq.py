@@ -43,6 +43,7 @@ from google.api_core import exceptions as gexc
 from google.cloud import bigquery
 
 from app.core.config import Settings, get_settings
+from app.core.gcp_credentials import credentials_stamp
 
 log = logging.getLogger("knowhub.bq")
 
@@ -261,10 +262,15 @@ class BigQueryDB:
         self.dataset = settings.bq_db_dataset
         self.location = settings.bq_db_location
         self._client: bigquery.Client | None = None
+        self._client_stamp: int | None = None
 
     @property
     def client(self) -> bigquery.Client:
-        if self._client is None:
+        # built again after a new `gcloud auth application-default login` (gcp_credentials.py)
+        stamp = credentials_stamp()
+        if self._client is None or stamp != self._client_stamp:
+            if self._client is not None:
+                log.info("Google credentials changed: new BigQuery client")
             # JOB_CREATION_OPTIONAL: short reads skip creating a job, which is most of
             # BigQuery's per-query latency. DML and scripts still create one.
             self._client = bigquery.Client(
@@ -272,6 +278,7 @@ class BigQueryDB:
                 location=self.location,
                 default_job_creation_mode="JOB_CREATION_OPTIONAL",
             )
+            self._client_stamp = stamp
         return self._client
 
     def table(self, name: str) -> str:

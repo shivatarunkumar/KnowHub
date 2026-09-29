@@ -19,11 +19,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from functools import lru_cache
 
 import httpx
 
 from app.core.config import Settings
+from app.core.gcp_credentials import per_login
 
 log = logging.getLogger("knowhub.ai")
 
@@ -288,9 +288,9 @@ async def _gemini_check(settings: Settings) -> dict:
 
 
 # --- vertex ai (same request shape, ADC instead of a key)
-@lru_cache(maxsize=1)
+@per_login
 def _credentials():
-    """ADC, loaded once. Cached because google.auth.default() touches the filesystem."""
+    """ADC, loaded again only after a new sign-in: google.auth.default() touches the filesystem."""
     import google.auth
 
     credentials, _ = google.auth.default(scopes=[VERTEX_SCOPE])
